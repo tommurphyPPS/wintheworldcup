@@ -229,7 +229,7 @@ select {
   flex: 0 0 auto !important;
 }
 .title {
-  font-size: clamp(20px, 2.6vw, 34px) !important;
+  font-size: clamp(18px, 2.25vw, 30px) !important;
   line-height: .94 !important;
   letter-spacing: -.04em !important;
 }
@@ -773,6 +773,121 @@ th {
 
 
 
+
+/* HERO SPIN BUTTON LAYOUT */
+.controls {
+  display: none !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+.hero {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  gap: 18px !important;
+  text-align: left !important;
+}
+.hero-main {
+  min-width: 0 !important;
+  flex: 1 1 auto !important;
+}
+.hero-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  flex: 0 0 210px !important;
+}
+.hero-spin-btn {
+  width: 100% !important;
+  min-width: 178px !important;
+  min-height: 48px !important;
+  padding: 11px 26px !important;
+  font-size: 16px !important;
+  border-radius: 999px !important;
+}
+.hero .badge,
+#teamBadge {
+  display: none !important;
+}
+.hero .title {
+  font-size: clamp(18px, 2.15vw, 29px) !important;
+  line-height: .96 !important;
+  letter-spacing: -.04em !important;
+}
+@media (max-width: 900px) {
+  .hero {
+    flex-wrap: wrap !important;
+    align-items: flex-start !important;
+  }
+  .hero-actions {
+    width: 100% !important;
+    flex: 1 1 100% !important;
+    justify-content: flex-start !important;
+  }
+  .hero-spin-btn {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 48px !important;
+    font-size: 16px !important;
+    padding: 11px 20px !important;
+  }
+}
+
+/* ANIMATED WORLD CUP WIN SCREEN */
+.sim-stage.champion-stage {
+  display: grid !important;
+  grid-template-columns: 340px minmax(0, 1fr) !important;
+  gap: 16px !important;
+  min-height: 520px !important;
+  overflow: hidden !important;
+  position: relative !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+.sim-team-sheet, .sim-celebration {
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 24px;
+  background: rgba(9,14,23,.74);
+  overflow: hidden;
+  position: relative;
+}
+.sim-team-sheet { padding: 16px; overflow: auto; }
+.sim-team-sheet-head { display:flex; justify-content:space-between; gap:10px; align-items:center; margin-bottom:12px; color:var(--accent); font-weight:1000; font-size:18px; }
+.sim-team-row { display:grid; grid-template-columns:1fr 62px 62px 76px; gap:8px; align-items:center; border-top:1px solid rgba(255,255,255,.10); padding:9px 0; font-size:12px; font-weight:850; }
+.sim-team-row.header { color:var(--muted); text-transform:uppercase; letter-spacing:.08em; font-size:10px; font-weight:1000; border-top:0; padding-top:0; }
+.sim-team-name small { display:block; color:var(--muted); font-size:10px; margin-top:2px; }
+.sim-team-stat { text-align:center; color:#fff; font-weight:1000; }
+.sim-celebration { min-height:520px; display:grid; place-items:center; text-align:center; background:radial-gradient(circle at 50% 35%, rgba(242,193,78,.35), rgba(12,18,28,.88) 45%, rgba(5,9,15,.96) 100%); }
+.sim-celebration::before { content:""; position:absolute; inset:auto -10% 0 -10%; height:38%; background:linear-gradient(180deg, transparent, rgba(31,122,68,.36)); pointer-events:none; }
+.celebration-confetti { position:absolute; inset:0; overflow:hidden; pointer-events:none; }
+.celebration-confetti i { position:absolute; top:-20px; width:9px; height:16px; background:var(--accent); opacity:.95; animation:confettiFall 3.1s linear infinite; }
+.celebration-confetti i:nth-child(3n) { width:7px; height:12px; background:#fff; }
+.celebration-confetti i:nth-child(3n+1) { background:#ff4d4d; }
+.celebration-confetti i:nth-child(3n+2) { background:#4d8dff; }
+@keyframes confettiFall { 0%{ transform:translateY(-30px) rotate(0deg); } 100%{ transform:translateY(620px) rotate(720deg); } }
+.firework { position:absolute; width:9px; height:9px; border-radius:50%; box-shadow:0 -70px 0 0 #fff, 50px -50px 0 0 #ff4d4d, 70px 0 0 0 var(--accent), 50px 50px 0 0 #4d8dff, 0 70px 0 0 #fff, -50px 50px 0 0 #ff4d4d, -70px 0 0 0 var(--accent), -50px -50px 0 0 #4d8dff; animation:fireworkPop 1.8s ease-out infinite; opacity:0; }
+.firework.f1 { left:18%; top:30%; animation-delay:.1s; }
+.firework.f2 { right:18%; top:28%; animation-delay:.7s; transform:scale(.85); }
+.firework.f3 { right:33%; top:17%; animation-delay:1.2s; transform:scale(.6); }
+@keyframes fireworkPop { 0%{ transform:scale(.1); opacity:0; } 18%{ opacity:1; } 70%{ opacity:.8; } 100%{ transform:scale(1.25); opacity:0; } }
+.trophy-rise { position:relative; z-index:2; font-size:104px; filter:drop-shadow(0 0 26px rgba(242,193,78,.75)); animation:trophyRise 1.45s cubic-bezier(.16,1,.3,1) both, trophyGlow 1.8s ease-in-out infinite alternate 1.2s; }
+@keyframes trophyRise { 0%{ transform:translateY(190px) scale(.72); opacity:0; } 100%{ transform:translateY(0) scale(1); opacity:1; } }
+@keyframes trophyGlow { from{ filter:drop-shadow(0 0 16px rgba(242,193,78,.55)); } to{ filter:drop-shadow(0 0 38px rgba(242,193,78,.95)); } }
+.champion-copy { position:relative; z-index:3; }
+.champion-copy h2 { margin:10px 0 4px; font-size:clamp(36px,5vw,76px); line-height:.9; letter-spacing:-.07em; }
+.champion-copy h2 span { color:var(--accent); }
+.champion-copy p { margin:0; color:#e8edf8; font-size:22px; font-weight:1000; }
+.champion-score-card { position:relative; z-index:3; margin-top:20px; border:1px solid rgba(255,255,255,.16); border-radius:20px; background:rgba(7,12,20,.82); padding:18px 24px; font-size:24px; font-weight:1000; }
+@media (max-width: 900px) {
+  .sim-stage.champion-stage { grid-template-columns: 1fr !important; }
+  .sim-celebration { min-height:460px; }
+}
+
+
 /* REMOVE TEAM DROPDOWN */
 #teamSelect,
 label[for="teamSelect"],
@@ -800,15 +915,17 @@ label[for="teamSelect"],
     <div class="game-grid">
       <div class="left-panel">
         <div class="controls">
-          <button id="spinBtn">SPIN</button>
           <select id="teamSelect" aria-label="Choose a revealed team"></select>
         </div>
         <div class="hero" id="hero">
-          <div>
+          <div class="hero-main">
             <div class="title" id="teamTitle">Spin to <span>start</span></div>
             <div class="meta" id="teamMeta">No team selected yet.</div>
           </div>
-          <div class="badge" id="teamBadge"></div>
+          <div class="hero-actions">
+            <button id="spinBtn" class="hero-spin-btn">SPIN</button>
+            <div class="badge" id="teamBadge" hidden></div>
+          </div>
         </div>
         <div class="empty-list" id="emptyList">The player list is empty until you spin.</div>
         <div class="table-wrap" id="tableWrap">
@@ -1502,7 +1619,7 @@ function renderTeam(team) {
   hero.classList.add('has-team');
   teamTitle.innerHTML = `${team.champion} <span>${team.year}</span>`;
   teamMeta.textContent = `${team.players.length} players from ${team.champion}`;
-  teamBadge.textContent = `${team.year} • ${team.champion}`;
+  teamBadge.textContent = '';
   emptyList.style.display = 'none';
   tableWrap.classList.add('show');
   const lockedTeam = usedTeamKeys.has(teamKey(team));
@@ -2190,6 +2307,92 @@ function simulateScore(myRating, oppRating, knockout=false) {
   }
   return [myGoals, opGoals];
 }
+
+function weightedDraftPick(candidates, weightFn) {
+  if (!candidates.length) return null;
+  const weighted = candidates.map(p => ({ pick:p, weight:Math.max(1, Number(weightFn(p)) || 1) }));
+  const total = weighted.reduce((sum, item) => sum + item.weight, 0);
+  let r = Math.random() * total;
+  for (const item of weighted) {
+    r -= item.weight;
+    if (r <= 0) return item.pick;
+  }
+  return weighted[weighted.length - 1].pick;
+}
+function positionKeyForPick(pick) {
+  const player = findPlayerForPick(pick) || {};
+  const raw = String(pick.position || player.PrimaryPosition || player.Position || '').toUpperCase();
+  if (/GK/.test(raw)) return 'GK';
+  if (/ST/.test(raw)) return 'ST';
+  if (/CF/.test(raw)) return 'CF';
+  if (/LW/.test(raw)) return 'LW';
+  if (/RW/.test(raw)) return 'RW';
+  if (/CAM/.test(raw)) return 'CAM';
+  if (/LM/.test(raw)) return 'LM';
+  if (/RM/.test(raw)) return 'RM';
+  if (/CM/.test(raw)) return 'CM';
+  if (/DM/.test(raw)) return 'DM';
+  if (/LWB/.test(raw)) return 'LWB';
+  if (/RWB/.test(raw)) return 'RWB';
+  if (/LB/.test(raw)) return 'LB';
+  if (/RB/.test(raw)) return 'RB';
+  if (/CB/.test(raw)) return 'CB';
+  return raw || 'XI';
+}
+function attackingWeightForPick(pick) {
+  const player = findPlayerForPick(pick) || {};
+  const key = positionKeyForPick(pick);
+  const attack = Number(player.Attack || 60);
+  const rating = Number(pick.rating || player.RealOVR || 70);
+  const goalRole = { ST:1.00, CF:.95, LW:.78, RW:.78, CAM:.62, LM:.38, RM:.38, CM:.26, DM:.09, LWB:.08, RWB:.08, LB:.06, RB:.06, CB:.025, GK:0 };
+  return Math.max(0.01, (attack * 1.1 + rating * 0.18) * (goalRole[key] ?? .12));
+}
+function assistWeightForPick(pick) {
+  const player = findPlayerForPick(pick) || {};
+  const key = positionKeyForPick(pick);
+  const attack = Number(player.Attack || 55);
+  const rating = Number(pick.rating || player.RealOVR || 70);
+  const assistRole = { CAM:1.00, LW:.88, RW:.88, CM:.58, LM:.58, RM:.58, CF:.42, ST:.34, LWB:.24, RWB:.24, LB:.20, RB:.20, DM:.14, CB:.025, GK:0 };
+  return Math.max(0.01, (attack + rating * 0.12) * (assistRole[key] ?? .16));
+}
+function enrichMatchesWithPlayerStats(matches) {
+  const starters = draftedPicks.slice();
+  const outfield = starters.filter(p => String(p.position).toUpperCase() !== 'GK');
+  const goalkeepers = starters.filter(p => String(p.position).toUpperCase() === 'GK');
+  const totals = new Map(starters.map(p => [p.player, { player:p.player, position:p.position, goals:0, assists:0, conceded:0 }]));
+  matches.forEach(m => {
+    m.scorers = [];
+    m.assists = [];
+    for (let i = 0; i < Number(m.gf || 0); i++) {
+      const scorer = weightedDraftPick(outfield, attackingWeightForPick);
+      if (scorer) {
+        m.scorers.push(scorer.player);
+        const t = totals.get(scorer.player); if (t) t.goals += 1;
+      }
+      const canAssist = outfield.filter(p => !scorer || p.player !== scorer.player);
+      if (Math.random() < 0.76 && canAssist.length) {
+        const assister = weightedDraftPick(canAssist, assistWeightForPick);
+        if (assister) {
+          m.assists.push(assister.player);
+          const t = totals.get(assister.player); if (t) t.assists += 1;
+        }
+      }
+    }
+    goalkeepers.forEach(gk => { const t = totals.get(gk.player); if (t) t.conceded += Number(m.ga || 0); });
+  });
+  return [...totals.values()];
+}
+
+function renderChampionScreen(summary, matches) {
+  const stats = summary.playerStats || [];
+  const teamName = currentTeam ? `${teamDisplayName(currentTeam)} ${currentTeam.year}` : 'Your XI';
+  const finalMatch = [...matches].reverse().find(m => m.round === 'Final') || matches[matches.length - 1];
+  const rows = stats.map(row => `<div class="sim-team-row"><div class="sim-team-name">${row.player}<small>${row.position}</small></div><div class="sim-team-stat">${row.goals}</div><div class="sim-team-stat">${row.assists}</div><div class="sim-team-stat">${String(row.position).toUpperCase() === 'GK' ? row.conceded : '-'}</div></div>`).join('');
+  const confetti = Array.from({length:58}, (_,i)=>`<i style="left:${(i*17)%100}%;animation-delay:${(i%17)*-.18}s;animation-duration:${2.5+(i%7)*.22}s"></i>`).join('');
+  simStage.className = 'sim-stage champion-stage';
+  simStage.innerHTML = `<div class="sim-team-sheet"><div class="sim-team-sheet-head"><span>Your team</span><span>${stats.length}/11</span></div><div class="sim-team-row header"><div>Player</div><div>G</div><div>A</div><div>GC</div></div>${rows}</div><div class="sim-celebration"><div class="celebration-confetti">${confetti}</div><div class="firework f1"></div><div class="firework f2"></div><div class="firework f3"></div><div class="champion-copy"><div class="trophy-rise">🏆</div><h2>WORLD CUP<br><span>CHAMPIONS!</span></h2><p>${teamName}</p><div class="champion-score-card">Final: Your XI ${finalMatch ? `${finalMatch.gf}-${finalMatch.ga} ${finalMatch.opp}` : ''}</div></div></div>`;
+}
+
 function simulateWorldCup() {
   if (simulationHasRun || draftedPicks.length < 11 || subPicks.length < 3) return;
   simulationHasRun = true;
@@ -2224,12 +2427,13 @@ function simulateWorldCup() {
       finalPosition = opp.round === 'Final' ? 'World Cup Champions' : finalPosition;
     }
   }
-  renderSimulation(matches, myRating, finalPosition, points, gd, goalsFor);
+  const playerStats = enrichMatchesWithPlayerStats(matches);
+  renderSimulation(matches, myRating, finalPosition, points, gd, goalsFor, playerStats);
 }
-function renderSimulation(matches, rating, finalPosition, points, gd, goalsFor) {
+function renderSimulation(matches, rating, finalPosition, points, gd, goalsFor, playerStats = []) {
   simRevealMatches = matches;
   simRevealIndex = 0;
-  simStoredSummary = { rating, finalPosition, points, gd, goalsFor };
+  simStoredSummary = { rating, finalPosition, points, gd, goalsFor, playerStats };
 
   if (simulationPanel) {
     simulationPanel.innerHTML = '';
@@ -2245,6 +2449,7 @@ function renderSimulation(matches, rating, finalPosition, points, gd, goalsFor) 
   simPoolRecord.textContent = '0 pts';
   simFinalPosition.textContent = 'Pending';
   simScreenSubtitle.textContent = 'Click through each match to reveal your tournament.';
+  simStage.className = 'sim-stage';
   simStage.innerHTML = `<div class="sim-summary" style="font-size:20px;">Tournament generated. Press <b>Play first match</b> to start.</div>`;
   simFinalBox.classList.remove('show');
   simFinalBox.innerHTML = '';
@@ -2257,7 +2462,8 @@ function revealNextSimMatch() {
   const m = simRevealMatches[simRevealIndex];
   const resultClass = m.gf > m.ga ? 'sim-result-win' : m.gf < m.ga ? 'sim-result-loss' : '';
   if (simRevealIndex === 0) simStage.innerHTML = '';
-  simStage.insertAdjacentHTML('beforeend', `<div class="sim-match"><div class="sim-round">${m.round}</div><div><span class="${resultClass}">Your XI</span> vs ${m.opp}</div><div class="sim-score">${m.gf}-${m.ga}</div></div>`);
+  const detail = m.scorers && m.scorers.length ? `<div class="sim-summary" style="margin:6px 0 0;font-size:12px;">Goals: ${m.scorers.join(', ')}${m.assists && m.assists.length ? ` · Assists: ${m.assists.join(', ')}` : ''}</div>` : '';
+  simStage.insertAdjacentHTML('beforeend', `<div class="sim-match"><div class="sim-round">${m.round}</div><div><span class="${resultClass}">Your XI</span> vs ${m.opp}${detail}</div><div class="sim-score">${m.gf}-${m.ga}</div></div>`);
   simRevealIndex += 1;
 
   const shown = simRevealMatches.slice(0, simRevealIndex);
@@ -2273,6 +2479,7 @@ function revealNextSimMatch() {
   if (simRevealIndex >= simRevealMatches.length) {
     const s = simStoredSummary;
     simFinalPosition.textContent = s.finalPosition;
+    if (s.finalPosition === 'World Cup Champions') renderChampionScreen(s, simRevealMatches);
     simFinalBox.innerHTML = `Final position: <b>${s.finalPosition}</b><br>Pool: <b>${s.points} pts</b>, GD <b>${s.gd >= 0 ? '+' : ''}${s.gd}</b>, GF <b>${s.goalsFor}</b><div class="sim-result-actions"><button id="shareWorldCupResultBtn">Share Result</button><button id="copyChallengeLinkResultBtn">Copy Challenge Link</button><button id="startNewDraftBtn" class="sim-new-draft-btn">Start New Draft</button></div><div id="worldCupResultShareStatus" class="sim-share-status"></div>`;
     simFinalBox.classList.add('show');
     nextMatchBtn.disabled = true;
@@ -2969,6 +3176,7 @@ function startNewDraftAfterWorldCup() {
   setBlank();
   simulationPanel.innerHTML = '';
   simulationPanel.classList.remove('show');
+  simStage.className = 'sim-stage';
   simStage.innerHTML = '';
   simFinalBox.innerHTML = '';
   simFinalBox.classList.remove('show');
