@@ -882,6 +882,9 @@ th {
 .champion-copy h2 span { color:var(--accent); }
 .champion-copy p { margin:0; color:#e8edf8; font-size:22px; font-weight:1000; }
 .champion-score-card { position:relative; z-index:3; margin-top:20px; border:1px solid rgba(255,255,255,.16); border-radius:20px; background:rgba(7,12,20,.82); padding:18px 24px; font-size:24px; font-weight:1000; }
+.final-detail-block { margin-top:10px; display:flex; gap:10px; justify-content:center; align-items:center; flex-wrap:wrap; font-size:14px; line-height:1.25; color:#e8edf8; }
+.final-detail-block b { color:var(--accent); text-transform:uppercase; letter-spacing:.08em; font-size:12px; }
+.final-detail-block span { display:inline-block; border:1px solid rgba(255,255,255,.14); border-radius:999px; padding:4px 9px; background:rgba(255,255,255,.06); }
 @media (max-width: 900px) {
   .sim-stage.champion-stage { grid-template-columns: 1fr !important; }
   .sim-celebration { min-height:460px; }
@@ -2446,12 +2449,14 @@ function enrichMatchesWithPlayerStats(matches) {
 function renderChampionScreen(summary, matches) {
   const stats = summary.playerStats || [];
   const teamName = getCustomTeamName();
-  const sourceName = currentTeam ? `${teamDisplayName(currentTeam)} ${currentTeam.year}` : 'Draft XI';
   const finalMatch = [...matches].reverse().find(m => m.round === 'Final') || matches[matches.length - 1];
   const rows = stats.map(row => `<div class="sim-team-row"><div class="sim-team-name">${row.player}<small>${row.position}</small></div><div class="sim-team-stat">${row.goals}</div><div class="sim-team-stat">${row.assists}</div><div class="sim-team-stat">${String(row.position).toUpperCase() === 'GK' ? row.conceded : '-'}</div></div>`).join('');
+  const finalGoals = finalMatch && finalMatch.scorers && finalMatch.scorers.length ? finalMatch.scorers.map(name => `<span>⚽ ${name}</span>`).join('') : '<span>No goals scored</span>';
+  const finalAssists = finalMatch && finalMatch.assists && finalMatch.assists.length ? finalMatch.assists.map(name => `<span>🎯 ${name}</span>`).join('') : '<span>No assists recorded</span>';
+  const finalScore = finalMatch ? `${teamName} ${finalMatch.gf}-${finalMatch.ga} ${finalMatch.opp}` : `${teamName}`;
   const confetti = Array.from({length:58}, (_,i)=>`<i style="left:${(i*17)%100}%;animation-delay:${(i%17)*-.18}s;animation-duration:${2.5+(i%7)*.22}s"></i>`).join('');
   simStage.className = 'sim-stage champion-stage';
-  simStage.innerHTML = `<div class="sim-team-sheet"><div class="sim-team-sheet-head"><span>${teamName}</span><span>${stats.length}/11</span></div><div class="sim-team-row header"><div>Player</div><div>G</div><div>A</div><div>GC</div></div>${rows}</div><div class="sim-celebration"><div class="celebration-confetti">${confetti}</div><div class="firework f1"></div><div class="firework f2"></div><div class="firework f3"></div><div class="champion-copy"><div class="trophy-rise">🏆</div><h2>WORLD CUP<br><span>CHAMPIONS!</span></h2><p><span class="champion-user-team">${teamName}</span><br><small>Built from ${sourceName}</small></p><div class="champion-score-card">Final: ${teamName} ${finalMatch ? `${finalMatch.gf}-${finalMatch.ga} ${finalMatch.opp}` : ''}</div></div></div>`;
+  simStage.innerHTML = `<div class="sim-team-sheet"><div class="sim-team-sheet-head"><span>${teamName}</span><span>${stats.length}/11</span></div><div class="sim-team-row header"><div>Player</div><div>G</div><div>A</div><div>GC</div></div>${rows}</div><div class="sim-celebration"><div class="celebration-confetti">${confetti}</div><div class="firework f1"></div><div class="firework f2"></div><div class="firework f3"></div><div class="champion-copy"><div class="trophy-rise">🏆</div><h2>WORLD CUP<br><span>CHAMPIONS!</span></h2><p><span class="champion-user-team">${teamName}</span><br><small>World Cup Champions</small></p><div class="champion-score-card"><div>Final: ${finalScore}</div><div class="final-detail-block"><b>Goals</b>${finalGoals}</div><div class="final-detail-block"><b>Assists</b>${finalAssists}</div></div></div></div>`;
 }
 
 function simulateWorldCup() {
