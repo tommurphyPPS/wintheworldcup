@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>World Cup Winners Spinner</title>
+<title>Win the World Cup</title>
 <!-- build: challenge-import-fixed-final -->
 <style>
 :root { --bg:#101218; --panel:#181d29; --panel2:#202638; --text:#f6f7fb; --muted:#aeb6c8; --accent:#f2c14e; --line:#343b4f; }
@@ -2427,7 +2427,7 @@ function worldCupResultShareText() {
   const url = challengeShareUrl(code);
   const teamName = currentTeam ? `${currentTeam.year} ${teamDisplayName(currentTeam)}` : 'My World Cup XI';
   const matches = (simRevealMatches || []).map(m => `${m.round}: Your XI ${m.gf}-${m.ga} ${m.opp}`).join('\n');
-  return `My World Cup Draft result: ${s.finalPosition || 'Tournament complete'}\nTeam: ${teamName}\nOVR: ${s.rating || draftedTeamRating()}\nPool: ${s.points || 0} pts, GD ${Number(s.gd || 0) >= 0 ? '+' : ''}${s.gd || 0}, GF ${s.goalsFor || 0}\n\n${matches}\n\nChallenge this team:\n${url}\n\nCode: ${code}`;
+  return `My Win the World Cup result: ${s.finalPosition || 'Tournament complete'}\nTeam: ${teamName}\nOVR: ${s.rating || draftedTeamRating()}\nPool: ${s.points || 0} pts, GD ${Number(s.gd || 0) >= 0 ? '+' : ''}${s.gd || 0}, GF ${s.goalsFor || 0}\n\n${matches}\n\nChallenge this team:\n${url}\n\nCode: ${code}`;
 }
 function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight, maxLines) {
   const words = String(text || '').split(/\s+/).filter(Boolean);
@@ -2571,10 +2571,10 @@ async function shareWorldCupResult() {
     const blob = await canvasToBlob(canvas);
     const file = blob ? new File([blob], 'world-cup-draft-result.png', { type: 'image/png' }) : null;
     if (navigator.canShare && file && navigator.canShare({ files: [file] })) {
-      await navigator.share({ title: 'My World Cup Draft Result', text: `Challenge my team: ${url}`, files: [file] });
+      await navigator.share({ title: 'My Win the World Cup Result', text: `Challenge my team: ${url}`, files: [file] });
       setWorldCupShareStatus('Share sheet opened with your result image and challenge link.');
     } else if (navigator.share) {
-      await navigator.share({ title: 'My World Cup Draft Result', text, url });
+      await navigator.share({ title: 'My Win the World Cup Result', text, url });
       setWorldCupShareStatus('Share sheet opened with your result and challenge link.');
     } else {
       await navigator.clipboard.writeText(text);
@@ -2611,7 +2611,7 @@ function shortTeamList(team) {
   return team.starters.map(p => `${p.slot || p.position}: ${p.player} (${p.rating})`).join(' · ');
 }
 function updateChallengeButtons() {
-  const ready = hasShareableStartingXI() && !simulationHasRun;
+  const ready = hasShareableStartingXI();
   if (headerChallengeBtn) {
     headerChallengeBtn.disabled = false;
     headerChallengeBtn.classList.toggle('ready', ready || Boolean(importedChallengeTeam));
@@ -2656,7 +2656,7 @@ function setChallengePreview(team) {
   challengePreview.innerHTML = `<strong>Imported:</strong> ${team.formation || 'Unknown formation'} · OVR ${averageChallengeRating(team)}<br>${shortTeamList(team)}`;
 }
 function openChallengeModal() {
-  const ready = hasShareableStartingXI() && !simulationHasRun;
+  const ready = hasShareableStartingXI();
   if (myChallengeCodeBox) {
     myChallengeCodeBox.value = ready ? encodeChallengeTeam(teamPayloadFromDraft()) : '';
     myChallengeCodeBox.placeholder = ready ? '' : 'Fill your XI to generate your code';
@@ -2698,7 +2698,7 @@ async function shareChallengeCode() {
   if (myChallengeCodeBox) myChallengeCodeBox.value = code;
   try {
     if (navigator.share) {
-      await navigator.share({ title: 'World Cup Draft Challenge', text: `Challenge my World Cup XI: ${code}`, url });
+      await navigator.share({ title: 'Win the World Cup', text: `Challenge my World Cup XI: ${code}`, url });
       setChallengeError('Share sheet opened. Send the link/code to your friend.');
     } else {
       await navigator.clipboard.writeText(shareText);
@@ -2716,20 +2716,20 @@ async function shareChallengeCode() {
 function importChallengeCode() {
   const code = friendChallengeCodeBox ? extractChallengeCodeFromText(friendChallengeCodeBox.value) : '';
   if (!code.trim()) {
-    const ready = hasShareableStartingXI() && !simulationHasRun;
+    const ready = hasShareableStartingXI();
     if (importedChallengeTeam && ready) {
       closeChallengeModal();
       startChallengeMatch();
       return;
     }
-    setChallengeError(importedChallengeTeam ? 'Friend team is loaded. Draft your XI + 3 subs before playing.' : 'Paste your friend\'s WCG code into the Friend code box first.');
+    setChallengeError(importedChallengeTeam ? 'Friend team is loaded. Fill your XI before playing.' : 'Paste your friend\'s WCG code into the Friend code box first.');
     return;
   }
   try {
     importedChallengeTeam = decodeChallengeTeam(code);
     setChallengePreview(importedChallengeTeam);
     updateChallengeButtons();
-    const ready = hasShareableStartingXI() && !simulationHasRun;
+    const ready = hasShareableStartingXI();
     if (ready) {
       closeChallengeModal();
       startChallengeMatch();
@@ -3002,7 +3002,7 @@ function loadChallengeFromUrl() {
     setChallengePreview(importedChallengeTeam);
     updateChallengeButtons();
     openChallengeModal();
-    setChallengeError('Friend team loaded from the link. Draft your XI + 3 subs, then play them.');
+    setChallengeError('Friend team loaded from the link. Fill your starting XI, then play them.');
   } catch (err) {
     openChallengeModal();
     setChallengeError(err.message || 'Could not load the challenge team from the link.');
@@ -3079,8 +3079,8 @@ loadChallengeFromUrl();
       const code=(document.getElementById('visibleTeamCodeBox')||{}).value || '';
       if(!code){ const el=document.getElementById('shareTeamMissing'); if(el) el.textContent='Complete your team first.'; return; }
       const url=getChallengeUrl(code);
-      const text='Challenge my World Cup Draft team:\n' + url + '\n\nCode: ' + code;
-      if(navigator.share){ try { await navigator.share({title:'Challenge my World Cup Draft team', text, url}); return; } catch(err){} }
+      const text='Challenge my Win the World Cup team:\n' + url + '\n\nCode: ' + code;
+      if(navigator.share){ try { await navigator.share({title:'Challenge my Win the World Cup team', text, url}); return; } catch(err){} }
       await copyText(text); const el=document.getElementById('shareTeamMissing'); if(el) el.textContent='Share text copied.';
     }
   }, true);
