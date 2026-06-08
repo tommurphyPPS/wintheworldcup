@@ -976,7 +976,7 @@ label[for="teamSelect"],
       <aside class="field-panel" aria-label="Empty football field">
         <div class="field-head">
           <div>
-            <div class="field-title">Your XI</div>
+            <div class="field-title" id="fieldTeamName">Untitled FC</div>
             <div class="subtitle" style="margin:2px 0 0;font-size:13px;">Empty positions for now</div>
           </div>
           <select id="formationSelect" class="formation-select" aria-label="Choose formation">
@@ -1014,7 +1014,7 @@ label[for="teamSelect"],
     <div class="sim-topbar">
       <div>
         <div class="sim-big-title">World Cup <span>Simulation</span></div>
-        <div id="simScreenSubtitle" class="sim-subtitle">Your XI enters the tournament.</div>
+        <div id="simScreenSubtitle" class="sim-subtitle">Untitled FC enter the tournament.</div>
       </div>
       <button id="closeSimBtn" class="sim-close">Back to draft</button>
     </div>
@@ -1066,12 +1066,12 @@ label[for="teamSelect"],
     <div class="challenge-topbar">
       <div>
         <div class="challenge-big-title">Challenge <span>Match</span></div>
-        <div id="challengeScreenSubtitle" class="challenge-subtitle">Your XI vs Friend XI</div>
+        <div id="challengeScreenSubtitle" class="challenge-subtitle">Untitled FC vs Friend XI</div>
       </div>
       <button id="closeChallengeScreenBtn" class="challenge-close">Back to draft</button>
     </div>
     <div class="challenge-scoreboard">
-      <div class="challenge-team-card"><div class="challenge-team-label">Your XI</div><div id="challengeMyName" class="challenge-team-name">You</div><div id="challengeMyRating" class="challenge-team-rating">OVR --</div></div>
+      <div class="challenge-team-card"><div class="challenge-team-label">Your Team</div><div id="challengeMyName" class="challenge-team-name">Untitled FC</div><div id="challengeMyRating" class="challenge-team-rating">OVR --</div></div>
       <div class="challenge-score-card"><div id="challengeLiveScore" class="challenge-live-score">0-0</div><div id="challengeMinute" class="challenge-minute">Pre-match</div></div>
       <div class="challenge-team-card"><div class="challenge-team-label">Friend XI</div><div id="challengeOppName" class="challenge-team-name">Friend</div><div id="challengeOppRating" class="challenge-team-rating">OVR --</div></div>
     </div>
@@ -1320,6 +1320,7 @@ const simulateBtn = document.getElementById('simulateBtn');
 const headerChallengeBtn = document.getElementById('headerChallengeBtn');
 const headerResetDraftBtn = document.getElementById('headerResetDraftBtn');
 const customTeamNameInput = document.getElementById('customTeamNameInput');
+const fieldTeamName = document.getElementById('fieldTeamName');
 const challengeModal = document.getElementById('challengeModal');
 const myChallengeCodeBox = document.getElementById('myChallengeCodeBox');
 const shareChallengeBtn = document.getElementById('shareChallengeBtn');
@@ -1378,7 +1379,13 @@ function getCustomTeamName() {
 }
 function setCustomTeamName(value) {
   if (customTeamNameInput) customTeamNameInput.value = cleanCustomTeamName(value);
+  syncCustomTeamNameUI();
   updateChallengeButtons();
+}
+function syncCustomTeamNameUI() {
+  const name = getCustomTeamName();
+  if (fieldTeamName) fieldTeamName.textContent = name;
+  if (challengeMyName && !challengeScreen.classList.contains('show')) challengeMyName.textContent = name;
 }
 function sourceTeamLabel() {
   return currentTeam ? `${teamDisplayName(currentTeam)} ${currentTeam.year}` : 'No source squad yet';
@@ -2444,7 +2451,7 @@ function renderChampionScreen(summary, matches) {
   const rows = stats.map(row => `<div class="sim-team-row"><div class="sim-team-name">${row.player}<small>${row.position}</small></div><div class="sim-team-stat">${row.goals}</div><div class="sim-team-stat">${row.assists}</div><div class="sim-team-stat">${String(row.position).toUpperCase() === 'GK' ? row.conceded : '-'}</div></div>`).join('');
   const confetti = Array.from({length:58}, (_,i)=>`<i style="left:${(i*17)%100}%;animation-delay:${(i%17)*-.18}s;animation-duration:${2.5+(i%7)*.22}s"></i>`).join('');
   simStage.className = 'sim-stage champion-stage';
-  simStage.innerHTML = `<div class="sim-team-sheet"><div class="sim-team-sheet-head"><span>Your team</span><span>${stats.length}/11</span></div><div class="sim-team-row header"><div>Player</div><div>G</div><div>A</div><div>GC</div></div>${rows}</div><div class="sim-celebration"><div class="celebration-confetti">${confetti}</div><div class="firework f1"></div><div class="firework f2"></div><div class="firework f3"></div><div class="champion-copy"><div class="trophy-rise">🏆</div><h2>WORLD CUP<br><span>CHAMPIONS!</span></h2><p><span class="champion-user-team">${teamName}</span><br><small>Built from ${sourceName}</small></p><div class="champion-score-card">Final: ${teamName} ${finalMatch ? `${finalMatch.gf}-${finalMatch.ga} ${finalMatch.opp}` : ''}</div></div></div>`;
+  simStage.innerHTML = `<div class="sim-team-sheet"><div class="sim-team-sheet-head"><span>${teamName}</span><span>${stats.length}/11</span></div><div class="sim-team-row header"><div>Player</div><div>G</div><div>A</div><div>GC</div></div>${rows}</div><div class="sim-celebration"><div class="celebration-confetti">${confetti}</div><div class="firework f1"></div><div class="firework f2"></div><div class="firework f3"></div><div class="champion-copy"><div class="trophy-rise">🏆</div><h2>WORLD CUP<br><span>CHAMPIONS!</span></h2><p><span class="champion-user-team">${teamName}</span><br><small>Built from ${sourceName}</small></p><div class="champion-score-card">Final: ${teamName} ${finalMatch ? `${finalMatch.gf}-${finalMatch.ga} ${finalMatch.opp}` : ''}</div></div></div>`;
 }
 
 function simulateWorldCup() {
@@ -2517,7 +2524,7 @@ function revealNextSimMatch() {
   const resultClass = m.gf > m.ga ? 'sim-result-win' : m.gf < m.ga ? 'sim-result-loss' : '';
   if (simRevealIndex === 0) simStage.innerHTML = '';
   const detail = m.scorers && m.scorers.length ? `<div class="sim-summary" style="margin:6px 0 0;font-size:12px;">Goals: ${m.scorers.join(', ')}${m.assists && m.assists.length ? ` · Assists: ${m.assists.join(', ')}` : ''}</div>` : '';
-  simStage.insertAdjacentHTML('beforeend', `<div class="sim-match"><div class="sim-round">${m.round}</div><div><span class="${resultClass}">Your XI</span> vs ${m.opp}${detail}</div><div class="sim-score">${m.gf}-${m.ga}</div></div>`);
+  simStage.insertAdjacentHTML('beforeend', `<div class="sim-match"><div class="sim-round">${m.round}</div><div><span class="${resultClass}">${getCustomTeamName()}</span> vs ${m.opp}${detail}</div><div class="sim-score">${m.gf}-${m.ga}</div></div>`);
   simRevealIndex += 1;
 
   const shown = simRevealMatches.slice(0, simRevealIndex);
@@ -2882,7 +2889,7 @@ function createWorldCupResultCanvas() {
     ctx.fillText(m.round, 105, y);
     ctx.fillStyle = m.gf > m.ga ? '#8df0a1' : m.gf < m.ga ? '#ff9b9b' : '#ffffff';
     ctx.font = '1000 28px Arial, sans-serif';
-    ctx.fillText(`Your XI ${m.gf}-${m.ga} ${m.opp}`, 250, y);
+    ctx.fillText(`${teamName} ${m.gf}-${m.ga} ${m.opp}`, 250, y);
     y += 88;
   });
 
@@ -3344,7 +3351,8 @@ if (controlsPanel) {
   }, { passive: false, capture: true });
 }
 
-if (customTeamNameInput) customTeamNameInput.addEventListener('input', updateChallengeButtons);
+if (customTeamNameInput) customTeamNameInput.addEventListener('input', () => { syncCustomTeamNameUI(); updateChallengeButtons(); });
+syncCustomTeamNameUI();
 if (headerResetDraftBtn) headerResetDraftBtn.addEventListener('click', startNewDraftAfterWorldCup);
 if (headerChallengeBtn) {
   headerChallengeBtn.addEventListener('click', openChallengeModal);
