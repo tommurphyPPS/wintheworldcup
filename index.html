@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>World Cup Winners Spinner</title>
+<!-- build: challenge-import-fixed-final -->
 <style>
 :root { --bg:#101218; --panel:#181d29; --panel2:#202638; --text:#f6f7fb; --muted:#aeb6c8; --accent:#f2c14e; --line:#343b4f; }
 * { box-sizing:border-box; }
@@ -1640,6 +1641,14 @@ function tournamentImpact(player) {
   return Math.max(0, Math.min(6, boost));
 }
 
+
+// Compatibility helper for imported/challenge-code teams.
+// Older challenge code/import functions call getRealOVR; keep it available globally.
+function getRealOVR(player) {
+  if (!player) return 0;
+  if (player.RealOVR !== undefined && player.RealOVR !== '') return Number(player.RealOVR) || 0;
+  return overallRating(player);
+}
 function overallRating(player) {
   const explicitReal = num(player.RealOVR);
   if (explicitReal > 0) return Math.max(40, Math.min(100, Math.round(explicitReal)));
@@ -2358,7 +2367,7 @@ function decodeCompactChallengeBody(body) {
       year: found.team.year,
       position: slotLabel,
       rating: Number.isFinite(rating) ? rating : effectiveRating(found.player, slotLabel).rating,
-      baseRating: getRealOVR(found.player),
+      baseRating: (typeof getRealOVR === 'function' ? getRealOVR(found.player) : overallRating(found.player)),
       oop
     };
   }).sort((a, b) => Number(a.slotIndex || 0) - Number(b.slotIndex || 0));
