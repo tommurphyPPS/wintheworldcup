@@ -471,6 +471,161 @@ th {
 .challenge-label { display:block; margin:12px 0 6px; color:var(--muted); font-weight:900; font-size:12px; text-transform:uppercase; letter-spacing:.08em; }
 .challenge-code-box[readonly] { opacity:.92; }
 .challenge-preview { margin-top:10px; color:#cdd8cf; font-size:13px; line-height:1.35; }
+
+
+/* MOBILE STACKING FIX - keep desktop one-screen layout, but make mobile playable */
+@media (max-width: 900px) {
+  html, body {
+    height: auto !important;
+    max-height: none !important;
+    min-height: 100vh !important;
+    overflow: auto !important;
+  }
+  body {
+    padding: 8px !important;
+  }
+  .app {
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+  .topbar-main {
+    display: block !important;
+  }
+  .header-actions {
+    justify-content: flex-start !important;
+    margin-top: 8px !important;
+  }
+  .challenge-status {
+    text-align: left !important;
+    max-width: none !important;
+  }
+  h1 {
+    font-size: 28px !important;
+    line-height: .95 !important;
+  }
+  .card {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    padding: 8px !important;
+  }
+  .game-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    gap: 10px !important;
+  }
+  .left-panel,
+  .field-panel {
+    flex: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+  .left-panel {
+    display: block !important;
+  }
+  .field-panel {
+    display: block !important;
+    position: static !important;
+    visibility: visible !important;
+    padding: 8px !important;
+  }
+  .controls {
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+  }
+  .controls button {
+    flex: 0 0 auto !important;
+  }
+  select.show,
+  .controls select {
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+    width: auto !important;
+  }
+  .hero {
+    min-height: 58px !important;
+    max-height: none !important;
+    padding: 8px 10px !important;
+  }
+  .hero.has-team {
+    display: flex !important;
+    gap: 8px !important;
+  }
+  .title {
+    font-size: 24px !important;
+  }
+  .table-wrap.show {
+    display: block !important;
+    max-height: 38vh !important;
+    overflow: auto !important;
+  }
+  table {
+    min-width: 680px !important;
+  }
+  th, td {
+    padding: 7px 8px !important;
+    font-size: 11px !important;
+  }
+  .field-head {
+    margin-bottom: 6px !important;
+  }
+  .pitch {
+    display: block !important;
+    position: relative !important;
+    height: 520px !important;
+    min-height: 520px !important;
+    max-height: none !important;
+    flex: none !important;
+  }
+  .slot {
+    width: 72px !important;
+    min-height: 48px !important;
+    font-size: 10px !important;
+    padding: 4px !important;
+  }
+  .slot.filled .slot-player {
+    font-size: 9px !important;
+  }
+  .slot-rating {
+    font-size: 9px !important;
+    padding: 2px 6px !important;
+  }
+  .bench-panel {
+    display: block !important;
+    margin-top: 6px !important;
+  }
+  .bench-slots {
+    grid-template-columns: 1fr !important;
+    gap: 6px !important;
+  }
+  .bench-slot,
+  .sub-slot,
+  #benchSlots > div {
+    min-height: 44px !important;
+  }
+  .field-note,
+  .sim-controls {
+    display: block !important;
+  }
+  .sim-btn {
+    width: 100% !important;
+  }
+  .sim-screen,
+  .challenge-screen {
+    overflow: auto !important;
+  }
+}
+
 </style>
 </head>
 <body>
