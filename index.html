@@ -1190,6 +1190,17 @@ let importedChallengeTeam = null;
 let challengeState = null;
 let lastFormation = formationSelect.value;
 function teamKey(team) { return team ? `${team.year}-${team.champion}` : ''; }
+
+function updateSpinLock() {
+  if (!spinBtn) return;
+  if (simulationHasRun) {
+    spinBtn.disabled = true;
+    return;
+  }
+  const pendingPick = Boolean(currentTeam) && Array.isArray(currentDisplayPlayers) && currentDisplayPlayers.length > 0;
+  spinBtn.disabled = pendingPick;
+}
+
 function val(x) { return x === undefined || x === null || x === '' ? '-' : x; }
 
 const formations = {
@@ -1362,6 +1373,8 @@ function swapSelectedSubIntoField(fieldSlot) {
   updateBenchCount();
   updateSimulationButton();
   if (draftStatus) draftStatus.textContent = `${benchPick.player} swapped into ${fieldSlot.dataset.position}. ${clickedStarterPick.player} moved to the bench.`;
+
+  updateSpinLock();
 }
 function placeSelectedSub(slot) {
   if (!selectedPlayer || !slot || !slot.classList.contains('selectable') || slot.dataset.filled === 'true') return;
@@ -1384,6 +1397,11 @@ function placeSelectedSub(slot) {
   teamSelect.innerHTML = teams.map((t,i)=>`<option value="${i}" ${usedTeamKeys.has(teamKey(t)) ? 'disabled' : ''}>${t.year} — ${t.champion}${usedTeamKeys.has(teamKey(t)) ? ' (used)' : ''}</option>`).join('');
   teamSelect.value = teams.indexOf(currentTeam);
   if (draftStatus) draftStatus.textContent = `${playerName} added as substitute ${subPicks.length}/3. That team is now locked. Spin for the next team.`;
+
+  currentTeam = null;
+  selectedPlayer = null;
+  currentDisplayPlayers = [];
+  updateSpinLock();
 }
 function renderFormation(key = formationSelect.value) {
   pitch.querySelectorAll('.slot').forEach(el => el.remove());
@@ -1407,6 +1425,9 @@ function renderFormation(key = formationSelect.value) {
   if (draftStatus) draftStatus.textContent = 'Formation changed. Pick a player row, then click a highlighted empty field spot.';
 }
 function setBlank() {
+  currentTeam = null;
+  selectedPlayer = null;
+  currentDisplayPlayers = [];
   hasSpun = false;
   teamSelect.classList.remove('show');
   teamSelect.innerHTML = '';
@@ -1426,6 +1447,8 @@ function setBlank() {
   resetBench();
   clearSelectableSlots();
   if (draftStatus) draftStatus.textContent = 'Click spin, pick a player row, then click a highlighted empty field spot.';
+
+  updateSpinLock();
 }
 function renderTeam(team) {
   hasSpun = true;
@@ -1456,7 +1479,8 @@ function renderTeam(team) {
   teamSelect.innerHTML = teams.map((t,i)=>`<option value="${i}" ${usedTeamKeys.has(teamKey(t)) ? 'disabled' : ''}>${t.year} — ${t.champion}${usedTeamKeys.has(teamKey(t)) ? ' (used)' : ''}</option>`).join('');
   teamSelect.value = teams.indexOf(team);
   teamSelect.classList.add('show');
-}
+
+  updateSpinLock();}
 function showLoading() {
   hero.classList.remove('has-team');
   teamTitle.innerHTML = 'Spinning<span>...</span>';
@@ -1471,6 +1495,7 @@ function showLoading() {
   emptyList.innerHTML = '<div><div class="loader"></div><div>Spinning through the draft pool...</div></div>';
 }
 function spin() {
+  if (spinBtn && spinBtn.disabled) return;
   const availableAtStart = teams.filter(t => !usedTeamKeys.has(teamKey(t)));
   if (!availableAtStart.length) { alert('All teams in the draft pool have been used.'); return; }
   spinBtn.disabled = true;
@@ -2036,6 +2061,11 @@ function placeSelectedPlayer(slot) {
   teamSelect.innerHTML = teams.map((t,i)=>`<option value="${i}" ${usedTeamKeys.has(teamKey(t)) ? 'disabled' : ''}>${t.year} — ${t.champion}${usedTeamKeys.has(teamKey(t)) ? ' (used)' : ''}</option>`).join('');
   teamSelect.value = teams.indexOf(currentTeam);
   if (draftStatus) draftStatus.textContent = `${playerName} added to ${slot.dataset.position}${fitType === 'oop' ? ' out of position (-7 OVR)' : ''}. That team is now locked. Spin for the next team.`;
+
+  currentTeam = null;
+  selectedPlayer = null;
+  currentDisplayPlayers = [];
+  updateSpinLock();
 }
 
 function draftedTeamRating() {
@@ -2907,6 +2937,8 @@ function startNewDraftAfterWorldCup() {
   spinBtn.disabled = false;
   updateSimulationButton();
   updateChallengeButtons();
+
+  updateSpinLock();
 }
 
 function closeSimulationScreen() {
@@ -2978,6 +3010,7 @@ if (closeSimBtn) closeSimBtn.addEventListener('click', closeSimulationScreen);
 spinBtn.addEventListener('click', spin);
 if (simulateBtn) simulateBtn.addEventListener('click', simulateWorldCup);
 teamSelect.addEventListener('change', () => {
+  if (spinBtn && spinBtn.disabled) return;
   const team = teams[Number(teamSelect.value)];
   if (usedTeamKeys.has(teamKey(team))) return;
   renderTeam(team);
@@ -3011,6 +3044,7 @@ function loadChallengeFromUrl() {
 renderFormation();
 setBlank();
 updateChallengeButtons();
+updateSpinLock();
 loadChallengeFromUrl();
 
 
