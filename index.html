@@ -626,6 +626,135 @@ th {
   }
 }
 
+
+
+/* MOBILE PLAYER TABLE LOCK FIX */
+@media (max-width: 900px) {
+  body {
+    overflow-x: hidden !important;
+  }
+  .left-panel {
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: visible !important;
+  }
+  .table-wrap,
+  .table-wrap.show {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 40vh !important;
+    min-height: 260px !important;
+    max-height: 360px !important;
+    overflow: auto !important;
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+    position: relative !important;
+    flex: none !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior: contain !important;
+    touch-action: pan-x pan-y !important;
+  }
+  .table-wrap table {
+    width: max-content !important;
+    min-width: 900px !important;
+    table-layout: fixed !important;
+  }
+  .table-wrap thead th {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 20 !important;
+    background: #202638 !important;
+  }
+  .table-wrap th:first-child,
+  .table-wrap td:first-child {
+    position: sticky !important;
+    left: 0 !important;
+    z-index: 12 !important;
+    background: #171c28 !important;
+  }
+  .table-wrap thead th:first-child {
+    z-index: 30 !important;
+    background: #202638 !important;
+  }
+  .empty-list {
+    height: 260px !important;
+    min-height: 260px !important;
+    max-height: 260px !important;
+  }
+}
+
+
+/* MOBILE CHALLENGE MODAL TAP FIX */
+@media (max-width: 900px) {
+  .header-actions {
+    position: relative !important;
+    z-index: 50 !important;
+  }
+  #headerChallengeBtn,
+  #headerResetDraftBtn {
+    pointer-events: auto !important;
+    touch-action: manipulation !important;
+    -webkit-tap-highlight-color: rgba(242,193,78,.25) !important;
+  }
+  .challenge-modal {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 2147483000 !important;
+    padding: 10px !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    overflow: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  .challenge-modal.show {
+    display: flex !important;
+  }
+  .challenge-dialog {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 14px 0 32px !important;
+    padding: 14px !important;
+    border-radius: 18px !important;
+  }
+  .challenge-dialog h2 {
+    font-size: 24px !important;
+  }
+  .challenge-code-box {
+    min-height: 86px !important;
+    font-size: 12px !important;
+  }
+  .challenge-modal-actions {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+  }
+  .challenge-modal-actions button {
+    width: 100% !important;
+  }
+}
+
+
+.sim-result-actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
+.sim-result-actions button { flex:1 1 190px; border-radius:16px; padding:12px 16px; font-size:13px; box-shadow:none; }
+.sim-share-status { margin-top:10px; color:#cdd8cf; font-size:13px; font-weight:800; line-height:1.35; }
+@media (max-width:720px){ .sim-result-actions { display:grid; grid-template-columns:1fr; } .sim-result-actions button { width:100%; } }
+
+
+/* ALWAYS VISIBLE TEAM SHARE PANEL */
+.share-team-panel {
+  border:1px solid rgba(242,193,78,.35);
+  background:rgba(242,193,78,.08);
+  border-radius:16px;
+  padding:12px;
+  margin:12px 0;
+}
+.share-team-title { color:var(--accent); font-weight:1000; margin-bottom:6px; }
+.share-team-help { color:#cdd8cf; font-size:12px; line-height:1.35; margin-bottom:8px; }
+.share-team-code { width:100%; min-height:58px; border:1px solid var(--line); border-radius:12px; background:#0f1420; color:var(--text); padding:10px; font-weight:900; font-size:12px; }
+.share-team-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+.share-team-actions button { border-radius:12px; padding:10px 12px; font-size:12px; box-shadow:none; }
+.share-team-missing { color:#ffdf8a; font-size:12px; font-weight:850; }
+
 </style>
 </head>
 <body>
@@ -637,8 +766,8 @@ th {
     </div>
     <div class="header-actions">
       <button id="headerResetDraftBtn">Reset Draft</button>
-      <button id="headerChallengeBtn" disabled>Challenge Friend</button>
-      <div id="challengeStatus" class="challenge-status">Complete your XI + 3 subs to create a challenge code.</div>
+      <button id="headerChallengeBtn">Challenge Friend</button>
+      <div id="challengeStatus" class="challenge-status">Paste a friend code anytime, or complete your XI + 3 subs to share/play.</div>
     </div>
   </div>
   <section class="card">
@@ -722,17 +851,30 @@ th {
 <div id="challengeModal" class="challenge-modal" aria-hidden="true">
   <div class="challenge-dialog">
     <h2>Challenge Friend</h2>
-    <p>Copy your current XI code, or paste your friend's encoded squad code. Imported teams are decoded from the pasted string and used directly in the match.</p>
+    <p>Paste a friend code anytime to load their team. If your own XI is ready, the match starts; if not, draft your team and come back to play them.</p>
 
-    <label class="challenge-label" for="myChallengeCodeBox">My team code</label>
-    <textarea id="myChallengeCodeBox" class="challenge-code-box" readonly placeholder="Complete your XI + 3 subs to generate a code"></textarea>
+    
+    <div id="shareTeamPanel" class="share-team-panel">
+      <div class="share-team-title">Your Team</div>
+      <div id="shareTeamHelp" class="share-team-help">Fill your XI to generate a share code.</div>
+      <textarea id="visibleTeamCodeBox" class="share-team-code" readonly placeholder="Your team code will appear once all 11 field positions are filled"></textarea>
+      <div class="share-team-actions">
+        <button id="shareMyTeamBtn" type="button">Share My Team</button>
+        <button id="copyMyTeamCodeBtn" type="button">Copy Code</button>
+        <button id="copyMyTeamLinkBtn" type="button">Copy Challenge Link</button>
+      </div>
+      <div id="shareTeamMissing" class="share-team-missing"></div>
+    </div>
+
+    <label class="challenge-label" for="myChallengeCodeBox" style="display:none">My team code</label>
+    <textarea id="myChallengeCodeBox" class="challenge-code-box" readonly style="display:none" placeholder="Complete your XI + 3 subs to generate a code"></textarea>
 
     <label class="challenge-label" for="friendChallengeCodeBox">Friend code</label>
     <textarea id="friendChallengeCodeBox" class="challenge-code-box" placeholder="Paste your friend's WCG-... code here"></textarea>
 
     <div class="challenge-modal-actions">
       <button id="copyChallengeBtn">Copy My Code</button>
-      <button id="importChallengeBtn">Import & Play Match</button>
+      <button id="importChallengeBtn">Import Friend Code</button>
       <button id="closeChallengeModalBtn">Close</button>
     </div>
     <div id="challengePreview" class="challenge-preview"></div>
@@ -998,6 +1140,7 @@ const headerChallengeBtn = document.getElementById('headerChallengeBtn');
 const headerResetDraftBtn = document.getElementById('headerResetDraftBtn');
 const challengeModal = document.getElementById('challengeModal');
 const myChallengeCodeBox = document.getElementById('myChallengeCodeBox');
+const shareChallengeBtn = document.getElementById('shareChallengeBtn');
 const friendChallengeCodeBox = document.getElementById('friendChallengeCodeBox');
 const closeChallengeModalBtn = document.getElementById('closeChallengeModalBtn');
 const challengeError = document.getElementById('challengeError');
@@ -1910,7 +2053,7 @@ function updateSimulationButton() {
   } else {
     simulateBtn.disabled = !ready;
     simulateBtn.classList.toggle('ready', ready);
-    simulateBtn.textContent = ready ? 'Run World Cup Simulation' : `Draft XI + 3 subs to unlock simulation (${draftedPicks.length}/11 XI, ${subPicks.length}/3 subs)`;
+    simulateBtn.textContent = ready ? 'Run World Cup Simulation' : `Draft XI + 3 subs to unlock simulation (${teamPayloadFromDraft().starters.length}/11 XI)`;
   }
   updateChallengeButtons();
 }
@@ -2051,7 +2194,7 @@ function revealNextSimMatch() {
   if (simRevealIndex >= simRevealMatches.length) {
     const s = simStoredSummary;
     simFinalPosition.textContent = s.finalPosition;
-    simFinalBox.innerHTML = `Final position: <b>${s.finalPosition}</b><br>Pool: <b>${s.points} pts</b>, GD <b>${s.gd >= 0 ? '+' : ''}${s.gd}</b>, GF <b>${s.goalsFor}</b><br><button id="startNewDraftBtn" class="sim-new-draft-btn">Start New Draft</button>`;
+    simFinalBox.innerHTML = `Final position: <b>${s.finalPosition}</b><br>Pool: <b>${s.points} pts</b>, GD <b>${s.gd >= 0 ? '+' : ''}${s.gd}</b>, GF <b>${s.goalsFor}</b><div class="sim-result-actions"><button id="shareWorldCupResultBtn">Share Result</button><button id="copyChallengeLinkResultBtn">Copy Challenge Link</button><button id="startNewDraftBtn" class="sim-new-draft-btn">Start New Draft</button></div><div id="worldCupResultShareStatus" class="sim-share-status"></div>`;
     simFinalBox.classList.add('show');
     nextMatchBtn.disabled = true;
     nextMatchBtn.textContent = 'Simulation complete';
@@ -2106,19 +2249,70 @@ function teamPayloadFromDraft() {
     starters: pitchStarters
   };
 }
-function encodeChallengeTeam(payload) {
-  const body = JSON.stringify(payload);
-  const checksum = stableHash(body);
-  return `WCG-${toBase64Url(body)}-${checksum}`;
+function shortChecksum(str) {
+  return parseInt(stableHash(str), 16).toString(36).toUpperCase().padStart(6,'0').slice(0,6);
 }
-function decodeChallengeTeam(code) {
-  const cleaned = String(code || '').trim().replace(/\s+/g,'');
-  const match = cleaned.match(/^WCG-([A-Za-z0-9_-]+)-([A-Fa-f0-9]{8})$/);
-  if (!match) throw new Error('That does not look like a valid WCG challenge code. It should start with WCG-.');
-  const body = fromBase64Url(match[1]);
-  const checksum = stableHash(body);
-  if (checksum.toUpperCase() !== match[2].toUpperCase()) throw new Error('Challenge code failed its checksum. It may have been copied incorrectly.');
-  const payload = JSON.parse(body);
+function playerNameKey(value) {
+  return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g,'').trim();
+}
+function findPlayerRef(playerName, teamName, yearValue) {
+  const wantedPlayer = playerNameKey(playerName);
+  const wantedTeam = playerNameKey(teamName);
+  const wantedYear = String(yearValue || '');
+  for (let ti = 0; ti < teams.length; ti++) {
+    const team = teams[ti];
+    const teamOk = !wantedTeam || playerNameKey(team.champion) === wantedTeam;
+    const yearOk = !wantedYear || String(team.year || '') === wantedYear;
+    if (!teamOk || !yearOk) continue;
+    const pi = team.players.findIndex(p => playerNameKey(p.Player) === wantedPlayer);
+    if (pi >= 0) return [ti, pi];
+  }
+  // Fallback for older shared codes if a team/year label changed.
+  for (let ti = 0; ti < teams.length; ti++) {
+    const pi = teams[ti].players.findIndex(p => playerNameKey(p.Player) === wantedPlayer);
+    if (pi >= 0) return [ti, pi];
+  }
+  return [-1, -1];
+}
+function playerFromRef(teamIndex, playerIndex) {
+  const team = teams[Number(teamIndex)];
+  if (!team || !team.players) return null;
+  const player = team.players[Number(playerIndex)];
+  if (!player) return null;
+  return { team, player };
+}
+function compactChallengePayload(payload) {
+  // Compact format keeps exact pitch slots but stores player references instead of full names.
+  // Format before base64: formation|slot.teamIndex.playerIndex.rating.oop;...
+  const rows = payload.starters.map(p => {
+    const ref = findPlayerRef(p.player, p.team, p.year);
+    const ti = ref[0];
+    const pi = ref[1];
+    if (ti < 0 || pi < 0) {
+      // Use a JSON fallback if any player cannot be found in the local dataset.
+      throw new Error('fallback');
+    }
+    return [
+      Number(p.slotIndex || 0).toString(36),
+      ti.toString(36),
+      pi.toString(36),
+      Number(p.rating || 0).toString(36),
+      p.oop ? '1' : '0'
+    ].join('.');
+  }).join(';');
+  return `${payload.formation}|${rows}`;
+}
+function encodeChallengeTeam(payload) {
+  try {
+    const body = compactChallengePayload(payload);
+    return `WCG-${toBase64Url(body)}-${shortChecksum(body)}`;
+  } catch (err) {
+    // Legacy fallback. This should rarely happen, but it protects custom/unknown players.
+    const body = JSON.stringify(payload);
+    return `WCG-${toBase64Url(body)}-${shortChecksum(body)}`;
+  }
+}
+function normaliseDecodedPayload(payload) {
   if (!payload || payload.game !== 'WCG' || !Array.isArray(payload.starters) || payload.starters.length !== 11) throw new Error('Challenge code is missing a full starting XI.');
   const formationSlots = formations[payload.formation] || formations['433'];
   payload.starters = payload.starters.map((p, index) => {
@@ -2140,6 +2334,264 @@ function decodeChallengeTeam(code) {
   payload.rating = Number(payload.rating || averageChallengeRating(payload));
   return payload;
 }
+function decodeCompactChallengeBody(body) {
+  const parts = body.split('|');
+  if (parts.length !== 2 || !parts[0] || !parts[1]) throw new Error('notcompact');
+  const formation = parts[0];
+  const formationSlots = formations[formation] || formations['433'];
+  const starters = parts[1].split(';').filter(Boolean).map((row, index) => {
+    const cells = row.split('.');
+    if (cells.length < 5) throw new Error('notcompact');
+    const slotIndex = parseInt(cells[0], 36);
+    const teamIndex = parseInt(cells[1], 36);
+    const playerIndex = parseInt(cells[2], 36);
+    const rating = parseInt(cells[3], 36);
+    const oop = cells[4] === '1';
+    const found = playerFromRef(teamIndex, playerIndex);
+    if (!found) throw new Error('Challenge code points to a player that is not in this version of the game.');
+    const slotLabel = (formationSlots[slotIndex - 1] || formationSlots[index] || [])[0] || `P${index+1}`;
+    return {
+      slotIndex,
+      slot: slotLabel,
+      player: found.player.Player,
+      team: found.team.champion,
+      year: found.team.year,
+      position: slotLabel,
+      rating: Number.isFinite(rating) ? rating : effectiveRating(found.player, slotLabel).rating,
+      baseRating: getRealOVR(found.player),
+      oop
+    };
+  }).sort((a, b) => Number(a.slotIndex || 0) - Number(b.slotIndex || 0));
+  return normaliseDecodedPayload({v: 4, game: 'WCG', formation, starters});
+}
+function extractChallengeCodeFromText(value) {
+  const text = String(value || '').trim();
+  const urlMatch = text.match(/[#?&]challenge=([^\s&#]+)/i);
+  if (urlMatch) return decodeURIComponent(urlMatch[1]);
+  const codeMatch = text.match(/WCG-[A-Za-z0-9_-]+-[A-Za-z0-9]{6,8}/i);
+  return codeMatch ? codeMatch[0] : text;
+}
+function decodeChallengeTeam(code) {
+  const cleaned = extractChallengeCodeFromText(code).replace(/\s+/g,'');
+  const match = cleaned.match(/^WCG-([A-Za-z0-9_-]+)-([A-Za-z0-9]{6,8})$/);
+  if (!match) throw new Error('That does not look like a valid WCG challenge code. It should start with WCG-.');
+  const body = fromBase64Url(match[1]);
+  const checksum = shortChecksum(body);
+  const legacyChecksum = stableHash(body).toUpperCase();
+  const supplied = match[2].toUpperCase();
+  if (checksum !== supplied && legacyChecksum !== supplied) throw new Error('Challenge code failed its checksum. It may have been copied incorrectly.');
+  try {
+    return decodeCompactChallengeBody(body);
+  } catch (compactErr) {
+    try {
+      return normaliseDecodedPayload(JSON.parse(body));
+    } catch (jsonErr) {
+      throw compactErr.message && compactErr.message !== 'notcompact' ? compactErr : new Error('Could not decode that challenge code.');
+    }
+  }
+}
+function challengeShareUrl(code) {
+  const base = `${location.origin}${location.pathname}`;
+  return `${base}#challenge=${encodeURIComponent(code)}`;
+}
+
+
+function filledStartingXI() {
+  return [...document.querySelectorAll('#pitch .slot')].filter(slot => slot.dataset.filled === 'true');
+}
+function hasShareableStartingXI() {
+  return teamPayloadFromDraft().starters.length >= 11;
+}
+
+function currentDraftChallengeCode() {
+  const payload = teamPayloadFromDraft();
+  if (!payload.starters || payload.starters.length < 11) throw new Error('Fill all 11 field positions before sharing. OOP players are allowed.');
+  return encodeChallengeTeam(payload);
+}
+function setWorldCupShareStatus(message) {
+  const el = document.getElementById('worldCupResultShareStatus');
+  if (el) el.textContent = message || '';
+}
+function worldCupResultShareText() {
+  const s = simStoredSummary || {};
+  const code = currentDraftChallengeCode();
+  const url = challengeShareUrl(code);
+  const teamName = currentTeam ? `${currentTeam.year} ${teamDisplayName(currentTeam)}` : 'My World Cup XI';
+  const matches = (simRevealMatches || []).map(m => `${m.round}: Your XI ${m.gf}-${m.ga} ${m.opp}`).join('\n');
+  return `My World Cup Draft result: ${s.finalPosition || 'Tournament complete'}\nTeam: ${teamName}\nOVR: ${s.rating || draftedTeamRating()}\nPool: ${s.points || 0} pts, GD ${Number(s.gd || 0) >= 0 ? '+' : ''}${s.gd || 0}, GF ${s.goalsFor || 0}\n\n${matches}\n\nChallenge this team:\n${url}\n\nCode: ${code}`;
+}
+function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight, maxLines) {
+  const words = String(text || '').split(/\s+/).filter(Boolean);
+  let line = '';
+  let lines = 0;
+  for (let i = 0; i < words.length; i++) {
+    const test = line ? `${line} ${words[i]}` : words[i];
+    if (ctx.measureText(test).width > maxWidth && line) {
+      ctx.fillText(line, x, y);
+      y += lineHeight;
+      lines += 1;
+      line = words[i];
+      if (maxLines && lines >= maxLines) return y;
+    } else {
+      line = test;
+    }
+  }
+  if (line && (!maxLines || lines < maxLines)) {
+    ctx.fillText(line, x, y);
+    y += lineHeight;
+  }
+  return y;
+}
+function roundRectPath(ctx, x, y, w, h, r) {
+  const rr = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + rr, y);
+  ctx.arcTo(x + w, y, x + w, y + h, rr);
+  ctx.arcTo(x + w, y + h, x, y + h, rr);
+  ctx.arcTo(x, y + h, x, y, rr);
+  ctx.arcTo(x, y, x + w, y, rr);
+  ctx.closePath();
+}
+function createWorldCupResultCanvas() {
+  const s = simStoredSummary || {};
+  const code = currentDraftChallengeCode();
+  const url = challengeShareUrl(code);
+  const teamName = currentTeam ? `${currentTeam.year} ${teamDisplayName(currentTeam)}` : 'My World Cup XI';
+  const canvas = document.createElement('canvas');
+  canvas.width = 1200;
+  canvas.height = 1600;
+  const ctx = canvas.getContext('2d');
+
+  const bg = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  bg.addColorStop(0, '#273657');
+  bg.addColorStop(0.45, '#101218');
+  bg.addColorStop(1, '#080a0f');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = 'rgba(242,193,78,0.18)';
+  ctx.beginPath();
+  ctx.arc(1040, 130, 290, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#f2c14e';
+  ctx.font = '900 40px Arial, sans-serif';
+  ctx.fillText('WORLD CUP DRAFT', 70, 95);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '1000 74px Arial, sans-serif';
+  wrapCanvasText(ctx, s.finalPosition || 'Tournament Complete', 70, 185, 1060, 82, 2);
+
+  roundRectPath(ctx, 70, 300, 1060, 255, 34);
+  ctx.fillStyle = 'rgba(255,255,255,0.075)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.16)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.fillStyle = '#aeb6c8';
+  ctx.font = '900 26px Arial, sans-serif';
+  ctx.fillText('TEAM', 110, 365);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '1000 48px Arial, sans-serif';
+  wrapCanvasText(ctx, teamName, 110, 425, 760, 54, 2);
+  ctx.fillStyle = '#f2c14e';
+  ctx.font = '1000 90px Arial, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText(String(s.rating || draftedTeamRating()), 1085, 440);
+  ctx.font = '900 24px Arial, sans-serif';
+  ctx.fillText('OVR', 1085, 475);
+  ctx.textAlign = 'left';
+
+  const stats = [
+    ['POOL', `${s.points || 0} pts`],
+    ['GD', `${Number(s.gd || 0) >= 0 ? '+' : ''}${s.gd || 0}`],
+    ['GF', String(s.goalsFor || 0)]
+  ];
+  stats.forEach((item, i) => {
+    const x = 110 + i * 260;
+    ctx.fillStyle = '#aeb6c8';
+    ctx.font = '900 22px Arial, sans-serif';
+    ctx.fillText(item[0], x, 525);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '1000 34px Arial, sans-serif';
+    ctx.fillText(item[1], x + 80, 525);
+  });
+
+  ctx.fillStyle = '#f2c14e';
+  ctx.font = '1000 34px Arial, sans-serif';
+  ctx.fillText('MATCHES', 70, 645);
+  let y = 705;
+  (simRevealMatches || []).forEach(m => {
+    roundRectPath(ctx, 70, y - 42, 1060, 74, 18);
+    ctx.fillStyle = 'rgba(255,255,255,0.055)';
+    ctx.fill();
+    ctx.fillStyle = '#aeb6c8';
+    ctx.font = '900 22px Arial, sans-serif';
+    ctx.fillText(m.round, 105, y);
+    ctx.fillStyle = m.gf > m.ga ? '#8df0a1' : m.gf < m.ga ? '#ff9b9b' : '#ffffff';
+    ctx.font = '1000 28px Arial, sans-serif';
+    ctx.fillText(`Your XI ${m.gf}-${m.ga} ${m.opp}`, 250, y);
+    y += 88;
+  });
+
+  roundRectPath(ctx, 70, 1360, 1060, 155, 28);
+  ctx.fillStyle = 'rgba(242,193,78,0.12)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(242,193,78,0.45)';
+  ctx.stroke();
+  ctx.fillStyle = '#f2c14e';
+  ctx.font = '1000 28px Arial, sans-serif';
+  ctx.fillText('CHALLENGE THIS TEAM', 110, 1418);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '900 26px Arial, sans-serif';
+  wrapCanvasText(ctx, url, 110, 1462, 980, 34, 2);
+  ctx.fillStyle = '#aeb6c8';
+  ctx.font = '800 20px Arial, sans-serif';
+  ctx.fillText(`Code: ${code}`, 110, 1510);
+  return canvas;
+}
+function canvasToBlob(canvas) {
+  return new Promise(resolve => canvas.toBlob(resolve, 'image/png', 0.95));
+}
+async function shareWorldCupResult() {
+  try {
+    const code = currentDraftChallengeCode();
+    const url = challengeShareUrl(code);
+    const text = worldCupResultShareText();
+    const canvas = createWorldCupResultCanvas();
+    const blob = await canvasToBlob(canvas);
+    const file = blob ? new File([blob], 'world-cup-draft-result.png', { type: 'image/png' }) : null;
+    if (navigator.canShare && file && navigator.canShare({ files: [file] })) {
+      await navigator.share({ title: 'My World Cup Draft Result', text: `Challenge my team: ${url}`, files: [file] });
+      setWorldCupShareStatus('Share sheet opened with your result image and challenge link.');
+    } else if (navigator.share) {
+      await navigator.share({ title: 'My World Cup Draft Result', text, url });
+      setWorldCupShareStatus('Share sheet opened with your result and challenge link.');
+    } else {
+      await navigator.clipboard.writeText(text);
+      if (blob) {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'world-cup-draft-result.png';
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      }
+      setWorldCupShareStatus('Result text/link copied and the image downloaded.');
+    }
+  } catch (err) {
+    setWorldCupShareStatus(err.message || 'Could not share this result.');
+  }
+}
+async function copyWorldCupChallengeLink() {
+  try {
+    const code = currentDraftChallengeCode();
+    const url = challengeShareUrl(code);
+    await navigator.clipboard.writeText(`Challenge my World Cup XI:\n${url}\n\nCode: ${code}`);
+    setWorldCupShareStatus('Challenge link copied. Send it to your friend.');
+  } catch (err) {
+    setWorldCupShareStatus('Could not copy the challenge link.');
+  }
+}
 function averageChallengeRating(team) {
   if (!team || !Array.isArray(team.starters) || !team.starters.length) return 0;
   const avg = team.starters.reduce((sum, p) => sum + Number(p.rating || 0), 0) / team.starters.length;
@@ -2150,25 +2602,36 @@ function shortTeamList(team) {
   return team.starters.map(p => `${p.slot || p.position}: ${p.player} (${p.rating})`).join(' · ');
 }
 function updateChallengeButtons() {
-  const ready = draftedPicks.length >= 11 && subPicks.length >= 3 && !simulationHasRun;
+  const ready = hasShareableStartingXI() && !simulationHasRun;
   if (headerChallengeBtn) {
-    headerChallengeBtn.disabled = !ready;
-    headerChallengeBtn.classList.toggle('ready', ready);
+    headerChallengeBtn.disabled = false;
+    headerChallengeBtn.classList.toggle('ready', ready || Boolean(importedChallengeTeam));
   }
   if (copyChallengeBtn) {
     copyChallengeBtn.disabled = !ready;
     copyChallengeBtn.classList.toggle('ready', ready);
   }
-  if (myChallengeCodeBox && ready && challengeModal && challengeModal.classList.contains('show')) {
-    myChallengeCodeBox.value = encodeChallengeTeam(teamPayloadFromDraft());
+  if (shareChallengeBtn) {
+    shareChallengeBtn.disabled = !ready;
+    shareChallengeBtn.classList.toggle('ready', ready);
+  }
+  if (importChallengeBtn) {
+    const hasFriend = Boolean(importedChallengeTeam);
+    importChallengeBtn.textContent = hasFriend && ready ? 'Play Imported Team' : 'Import Friend Code';
+  }
+  if (myChallengeCodeBox && challengeModal && challengeModal.classList.contains('show')) {
+    myChallengeCodeBox.value = ready ? encodeChallengeTeam(teamPayloadFromDraft()) : '';
+    myChallengeCodeBox.placeholder = ready ? '' : 'Fill your XI to generate your code';
   }
   if (challengeStatus) {
-    if (importedChallengeTeam) {
-      challengeStatus.innerHTML = `<strong>Friend code loaded.</strong> Challenge Friend to play the match.`;
+    if (importedChallengeTeam && ready) {
+      challengeStatus.innerHTML = `<strong>Friend code loaded.</strong> Click Challenge Friend to play.`;
+    } else if (importedChallengeTeam) {
+      challengeStatus.innerHTML = `<strong>Friend code loaded.</strong> Fill your XI to challenge them (${teamPayloadFromDraft().starters.length}/11 XI).`;
     } else if (ready) {
       challengeStatus.textContent = 'Ready: click Challenge Friend to copy your code or paste a friend code.';
     } else {
-      challengeStatus.textContent = `Complete XI + 3 subs to unlock challenge (${draftedPicks.length}/11 XI, ${subPicks.length}/3 subs).`;
+      challengeStatus.textContent = `Challenge Friend is available anytime. Fill your XI to share/play (${teamPayloadFromDraft().starters.length}/11 XI).`;
     }
   }
 }
@@ -2184,46 +2647,86 @@ function setChallengePreview(team) {
   challengePreview.innerHTML = `<strong>Imported:</strong> ${team.formation || 'Unknown formation'} · OVR ${averageChallengeRating(team)}<br>${shortTeamList(team)}`;
 }
 function openChallengeModal() {
-  if (draftedPicks.length < 11 || subPicks.length < 3) return;
-  if (myChallengeCodeBox) myChallengeCodeBox.value = encodeChallengeTeam(teamPayloadFromDraft());
+  const ready = hasShareableStartingXI() && !simulationHasRun;
+  if (myChallengeCodeBox) {
+    myChallengeCodeBox.value = ready ? encodeChallengeTeam(teamPayloadFromDraft()) : '';
+    myChallengeCodeBox.placeholder = ready ? '' : 'Fill your XI to generate your code';
+  }
   if (friendChallengeCodeBox) {
     friendChallengeCodeBox.value = '';
     setTimeout(() => friendChallengeCodeBox.focus(), 0);
   }
-  importedChallengeTeam = null;
-  setChallengePreview(null);
-  setChallengeError('');
+  setChallengePreview(importedChallengeTeam || null);
+  setChallengeError(ready ? '' : 'You can import a friend code now. Fill your XI before playing them.');
+  if (!challengeModal) return;
   challengeModal.classList.add('show');
   challengeModal.setAttribute('aria-hidden','false');
+  document.body.classList.add('challenge-modal-open');
+  updateChallengeButtons();
 }
 function closeChallengeModal() {
   if (!challengeModal) return;
   challengeModal.classList.remove('show');
   challengeModal.setAttribute('aria-hidden','true');
+  document.body.classList.remove('challenge-modal-open');
 }
 async function copyChallengeCode() {
-  if (draftedPicks.length < 11 || subPicks.length < 3) return;
+  if (!hasShareableStartingXI()) return;
   const code = encodeChallengeTeam(teamPayloadFromDraft());
   if (myChallengeCodeBox) myChallengeCodeBox.value = code;
   try {
     await navigator.clipboard.writeText(code);
-    setChallengeError('Your encoded team code was copied. Send it to your friend.');
+    setChallengeError('Your shorter team code was copied. Send it to your friend.');
   } catch (err) {
     setChallengeError('Copy your code from the My team code box and send it to your friend.');
   }
 }
+async function shareChallengeCode() {
+  if (!hasShareableStartingXI()) return;
+  const code = encodeChallengeTeam(teamPayloadFromDraft());
+  const url = challengeShareUrl(code);
+  const shareText = `Challenge my World Cup XI:\n${code}\n${url}`;
+  if (myChallengeCodeBox) myChallengeCodeBox.value = code;
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: 'World Cup Draft Challenge', text: `Challenge my World Cup XI: ${code}`, url });
+      setChallengeError('Share sheet opened. Send the link/code to your friend.');
+    } else {
+      await navigator.clipboard.writeText(shareText);
+      setChallengeError('Share link and code copied. Paste it into a message.');
+    }
+  } catch (err) {
+    try {
+      await navigator.clipboard.writeText(shareText);
+      setChallengeError('Share link and code copied. Paste it into a message.');
+    } catch (copyErr) {
+      setChallengeError('Copy your code from the My team code box and send it to your friend.');
+    }
+  }
+}
 function importChallengeCode() {
-  const code = friendChallengeCodeBox ? friendChallengeCodeBox.value : '';
+  const code = friendChallengeCodeBox ? extractChallengeCodeFromText(friendChallengeCodeBox.value) : '';
   if (!code.trim()) {
-    setChallengeError('Paste your friend\'s WCG code into the Friend code box first.');
+    const ready = hasShareableStartingXI() && !simulationHasRun;
+    if (importedChallengeTeam && ready) {
+      closeChallengeModal();
+      startChallengeMatch();
+      return;
+    }
+    setChallengeError(importedChallengeTeam ? 'Friend team is loaded. Draft your XI + 3 subs before playing.' : 'Paste your friend\'s WCG code into the Friend code box first.');
     return;
   }
   try {
     importedChallengeTeam = decodeChallengeTeam(code);
     setChallengePreview(importedChallengeTeam);
     updateChallengeButtons();
-    closeChallengeModal();
-    startChallengeMatch();
+    const ready = hasShareableStartingXI() && !simulationHasRun;
+    if (ready) {
+      closeChallengeModal();
+      startChallengeMatch();
+    } else {
+      setChallengeError('Friend team imported. Now fill your XI, then click Challenge Friend again to play.');
+    }
   } catch (err) {
     importedChallengeTeam = null;
     setChallengePreview(null);
@@ -2287,7 +2790,14 @@ function buildMinuteEvents(myTeam, oppTeam) {
   });
 }
 function startChallengeMatch() {
-  if (!importedChallengeTeam || draftedPicks.length < 11 || subPicks.length < 3) return;
+  if (!importedChallengeTeam) {
+    setChallengeError('Import a friend code first.');
+    return;
+  }
+  if (!hasShareableStartingXI()) {
+    setChallengeError('Fill all 11 field positions before playing the imported team. OOP players are allowed.');
+    return;
+  }
   const myTeam = currentChallengeTeam();
   const oppTeam = importedChallengeTeam;
   const myRating = averageChallengeRating(myTeam);
@@ -2427,9 +2937,29 @@ document.addEventListener('click', (event) => {
   event.preventDefault();
   startNewDraftAfterWorldCup();
 });
+document.addEventListener('click', (event) => {
+  const shareBtn = event.target.closest('#shareWorldCupResultBtn');
+  const copyBtn = event.target.closest('#copyChallengeLinkResultBtn');
+  if (shareBtn) {
+    event.preventDefault();
+    shareWorldCupResult();
+  }
+  if (copyBtn) {
+    event.preventDefault();
+    copyWorldCupChallengeLink();
+  }
+});
 if (headerResetDraftBtn) headerResetDraftBtn.addEventListener('click', startNewDraftAfterWorldCup);
-if (headerChallengeBtn) headerChallengeBtn.addEventListener('click', openChallengeModal);
+if (headerChallengeBtn) {
+  headerChallengeBtn.addEventListener('click', openChallengeModal);
+  headerChallengeBtn.addEventListener('touchend', function(e) {
+    if (headerChallengeBtn.disabled) return;
+    e.preventDefault();
+    openChallengeModal();
+  }, { passive: false });
+}
 if (copyChallengeBtn) copyChallengeBtn.addEventListener('click', copyChallengeCode);
+if (shareChallengeBtn) shareChallengeBtn.addEventListener('click', shareChallengeCode);
 if (importChallengeBtn) importChallengeBtn.addEventListener('click', importChallengeCode);
 if (closeChallengeModalBtn) closeChallengeModalBtn.addEventListener('click', closeChallengeModal);
 if (challengeNextMinuteBtn) challengeNextMinuteBtn.addEventListener('click', revealNextChallengeMinute);
@@ -2452,9 +2982,106 @@ formationSelect.addEventListener('change', () => {
   lastFormation = formationSelect.value;
   renderFormation();
 });
+function loadChallengeFromUrl() {
+  const hash = String(location.hash || '');
+  const query = String(location.search || '');
+  const source = hash.includes('challenge=') ? hash : query;
+  if (!source.includes('challenge=')) return;
+  try {
+    const code = extractChallengeCodeFromText(source);
+    importedChallengeTeam = decodeChallengeTeam(code);
+    setChallengePreview(importedChallengeTeam);
+    updateChallengeButtons();
+    openChallengeModal();
+    setChallengeError('Friend team loaded from the link. Draft your XI + 3 subs, then play them.');
+  } catch (err) {
+    openChallengeModal();
+    setChallengeError(err.message || 'Could not load the challenge team from the link.');
+  }
+}
 renderFormation();
 setBlank();
 updateChallengeButtons();
+loadChallengeFromUrl();
+
+
+// ALWAYS-VISIBLE TEAM SHARE FIX
+(function(){
+  function getShareCodeSafe(){
+    try {
+      if (typeof currentDraftChallengeCode === 'function') return currentDraftChallengeCode();
+      if (typeof teamPayloadFromDraft === 'function' && typeof encodeChallengeTeam === 'function') return encodeChallengeTeam(teamPayloadFromDraft());
+      return '';
+    } catch(e){ return ''; }
+  }
+  function isTeamShareReady(){
+    try {
+      if (typeof hasShareableStartingXI === 'function') return !!hasShareableStartingXI();
+      if (typeof teamPayloadFromDraft === 'function') return (teamPayloadFromDraft().starters || []).length >= 11;
+      const filled = document.querySelectorAll('#pitch .slot.filled').length;
+      return filled >= 11;
+    } catch(e){ return false; }
+  }
+  function getChallengeUrl(code){
+    const base = location.origin + location.pathname;
+    return base + '#challenge=' + encodeURIComponent(code);
+  }
+  async function copyText(txt){
+    try { await navigator.clipboard.writeText(txt); return true; }
+    catch(e){
+      const ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); return true;
+    }
+  }
+  function refreshShareTeamPanel(){
+    const visibleBox=document.getElementById('visibleTeamCodeBox');
+    const legacyBox=document.getElementById('myChallengeCodeBox');
+    const help=document.getElementById('shareTeamHelp');
+    const miss=document.getElementById('shareTeamMissing');
+    if(!visibleBox) return;
+    const ready=isTeamShareReady();
+    if(!ready){
+      visibleBox.value='';
+      if(legacyBox) legacyBox.value='';
+      if(help) help.textContent='Fill your XI to generate a share code.';
+      if(miss) miss.textContent='Your team is not complete yet.';
+      return;
+    }
+    const code=getShareCodeSafe();
+    visibleBox.value=code;
+    if(legacyBox) legacyBox.value=code;
+    if(help) help.textContent='Send this code or challenge link to a friend. They can paste it or open the link to load your team.';
+    if(miss) miss.textContent='';
+  }
+  window.refreshShareTeamPanel = refreshShareTeamPanel;
+  document.addEventListener('click', async function(e){
+    if(e.target && (e.target.id==='headerChallengeBtn' || e.target.id==='challengeFriendBtn')) setTimeout(refreshShareTeamPanel, 50);
+    if(e.target && e.target.id==='copyMyTeamCodeBtn'){
+      refreshShareTeamPanel();
+      const code=(document.getElementById('visibleTeamCodeBox')||{}).value || '';
+      if(code){ await copyText(code); const el=document.getElementById('shareTeamMissing'); if(el) el.textContent='Code copied.'; }
+    }
+    if(e.target && e.target.id==='copyMyTeamLinkBtn'){
+      refreshShareTeamPanel();
+      const code=(document.getElementById('visibleTeamCodeBox')||{}).value || '';
+      if(code){ await copyText(getChallengeUrl(code)); const el=document.getElementById('shareTeamMissing'); if(el) el.textContent='Challenge link copied.'; }
+    }
+    if(e.target && e.target.id==='shareMyTeamBtn'){
+      refreshShareTeamPanel();
+      const code=(document.getElementById('visibleTeamCodeBox')||{}).value || '';
+      if(!code){ const el=document.getElementById('shareTeamMissing'); if(el) el.textContent='Complete your team first.'; return; }
+      const url=getChallengeUrl(code);
+      const text='Challenge my World Cup Draft team:\n' + url + '\n\nCode: ' + code;
+      if(navigator.share){ try { await navigator.share({title:'Challenge my World Cup Draft team', text, url}); return; } catch(err){} }
+      await copyText(text); const el=document.getElementById('shareTeamMissing'); if(el) el.textContent='Share text copied.';
+    }
+  }, true);
+  const oldOpen = window.openChallengeModal;
+  if(typeof oldOpen === 'function'){
+    window.openChallengeModal=function(){ oldOpen.apply(this, arguments); setTimeout(refreshShareTeamPanel, 30); };
+  }
+  document.addEventListener('DOMContentLoaded', refreshShareTeamPanel);
+})();
+
 </script>
 </body>
 </html>
