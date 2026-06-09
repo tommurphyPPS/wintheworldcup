@@ -1261,6 +1261,148 @@ function seedSpecificPositionsForSquads() {
 seedSpecificPositionsForSquads();
 
 
+// --- ICON TEAM + POSITION PATCH ---
+// Fix Cristiano's current data-level positions so LW is not lost when Positions exists.
+// Also add missing icon/legend teams only when that icon is not already present anywhere in teams.
+(function applyIconTeamPatch() {
+  const norm = value => String(value || '')
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+
+  const allPlayers = () => teams.flatMap(team => Array.isArray(team.players) ? team.players : []);
+  const hasAnyPlayerName = names => {
+    const wanted = new Set(names.map(norm));
+    return allPlayers().some(player => wanted.has(norm(player.Player)));
+  };
+
+  // Cristiano should retain LW eligibility even when the row has explicit Positions.
+  allPlayers().forEach(player => {
+    if (norm(player.Player) === 'cristiano ronaldo') {
+      const positions = String(player.Positions || '')
+        .split(/[|,\/]/)
+        .map(p => p.trim().toUpperCase())
+        .filter(Boolean);
+      const merged = Array.from(new Set(['LW', ...positions, 'ST', 'CF']));
+      player.Positions = merged.join('|');
+      player.Position = 'LW';
+      player.PrimaryPosition = 'LW';
+    }
+  });
+
+  const mkPlayer = (team, name, pos, positions, ovr, att, def) => ({
+    Year: team.year,
+    Champion: team.champion,
+    Player: name,
+    Position: pos,
+    Positions: positions,
+    PrimaryPosition: pos,
+    Attack: String(att),
+    Defence: String(def),
+    Games: '0',
+    Goals: '0',
+    Assists: '0',
+    GoalsPerGame: '0',
+    AssistsPerGame: '0',
+    TacklesPerGame: pos === 'GK' ? '' : (def >= 80 ? '2.4' : '1.2'),
+    InterceptionsPerGame: '',
+    SavesPerGame: pos === 'GK' ? '2.6' : '',
+    SavePct: pos === 'GK' ? '0.80' : '',
+    DataConfidence: 'Icon-Hero-Style',
+    Notes: `${team.champion} icon team patch. OVR is EA/FIFA-style era rating for draft balance.`,
+    RealOVR: String(ovr),
+    FifaGuide: String(ovr),
+    PositionAudit: 'icon-team-patch-v1'
+  });
+
+  const iconTeams = [
+    {
+      aliases: ['johan cruyff'],
+      team: {
+        year: '1974', champion: 'Hero Netherlands', group: 'Icons', iconPatch: true,
+        players: [
+          ['Jan Jongbloed','GK','GK',88,18,88],
+          ['Wim Suurbier','RB','RB|RWB',87,60,87],
+          ['Wim Rijsbergen','CB','CB',86,51,86],
+          ['Ruud Krol','LB','LB|CB',92,63,92],
+          ['Arie Haan','DM','DM|CB|CM',88,72,84],
+          ['Wim Jansen','CM','CM|DM',86,74,80],
+          ['Johan Neeskens','CM','CM|CAM',93,86,82],
+          ['Rob Rensenbrink','LW','LW|CF',90,90,45],
+          ['Johan Cruyff','CF','CF|CAM|RW',96,96,55],
+          ['Johnny Rep','RW','RW|ST',88,88,42],
+          ['Willy van de Kerkhof','CM','CM|RM',84,78,74]
+        ]
+      }
+    },
+    {
+      aliases: ['ferenc puskas'],
+      team: {
+        year: '1954', champion: 'Hero Hungary', group: 'Icons', iconPatch: true,
+        players: [
+          ['Gyula Grosics','GK','GK',90,18,90],
+          ['Jeno Buzanszky','RB','RB',85,55,85],
+          ['Mihaly Lantos','LB','LB',86,58,86],
+          ['Gyula Lorant','CB','CB',87,51,87],
+          ['Jozsef Zakarias','DM','DM|CM',86,66,80],
+          ['Jozsef Bozsik','CM','CM|DM',92,82,80],
+          ['Zoltan Czibor','LW','LW',91,91,44],
+          ['Sandor Kocsis','ST','ST',94,94,38],
+          ['Nandor Hidegkuti','CF','CF|CAM',93,93,46],
+          ['Ferenc Puskas','CF','CF|ST',95,95,42],
+          ['Laszlo Budai','RW','RW',87,87,41]
+        ]
+      }
+    },
+    {
+      aliases: ['lev yashin'],
+      team: {
+        year: '1966', champion: 'Hero Soviet Union', group: 'Icons', iconPatch: true,
+        players: [
+          ['Lev Yashin','GK','GK',94,18,94],
+          ['Albert Shesternyov','CB','CB',90,52,90],
+          ['Murtaz Khurtsilava','CB','CB',87,52,87],
+          ['Vasili Danilov','RB','RB',84,55,84],
+          ['Valery Voronin','DM','DM|CM',89,72,84],
+          ['Jozsef Sabo','CM','CM|DM',86,76,76],
+          ['Igor Chislenko','RW','RW|LW',87,87,42],
+          ['Slava Metreveli','RW','RW|CF',88,88,42],
+          ['Anatoliy Banishevskiy','ST','ST',86,86,35],
+          ['Eduard Malofeyev','CF','CF|ST',85,85,36],
+          ['Galimzyan Khusainov','LW','LW',86,86,41]
+        ]
+      }
+    },
+    {
+      aliases: ['eusebio'],
+      team: {
+        year: '1966', champion: 'Hero Portugal 1966', group: 'Icons', iconPatch: true,
+        players: [
+          ['Jose Pereira','GK','GK',86,18,86],
+          ['Joao Morais','RB','RB',84,55,84],
+          ['Vicente Lucas','CB','CB',85,51,85],
+          ['Jose Carlos','CB','CB',84,50,84],
+          ['Hilario','LB','LB',86,58,86],
+          ['Mario Coluna','CM','CM|DM',92,82,82],
+          ['Jaime Graca','CM','CM',86,78,74],
+          ['Jose Augusto','RW','RW',88,88,42],
+          ['Eusebio','CF','CF|ST',94,94,43],
+          ['Jose Torres','ST','ST',87,87,35],
+          ['Antonio Simoes','LW','LW',88,88,42]
+        ]
+      }
+    }
+  ];
+
+  iconTeams.forEach(({ aliases, team }) => {
+    if (hasAnyPlayerName(aliases)) return;
+    team.players = team.players.map(args => mkPlayer(team, ...args));
+    teams.push(team);
+  });
+})();
+
+
 // --- 2026 DATA NORMALISATION PATCH ---
 // Current-year squads use FIFA/EA FC-style guide values as their OVR anchor.
 // These overrides fix obvious star-level issues without inflating ordinary starters.
