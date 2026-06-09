@@ -932,7 +932,65 @@ label[for="teamSelect"],
   display: none !important;
 }
 
+
+
+/* LAPTOP FIELD READABILITY UPDATE */
+.slot {
+  width: 102px !important;
+  min-height: 54px !important;
+  padding: 5px 7px !important;
+}
+.slot small {
+  font-size: 9px !important;
+  line-height: 1.05 !important;
+  margin-top: 1px !important;
+}
+.slot.filled .slot-player {
+  font-size: 11px !important;
+  line-height: 1.02 !important;
+  margin-top: 3px !important;
+  max-width: 100% !important;
+  overflow-wrap: anywhere !important;
+}
+.bench-slot,
+.sub-slot,
+#benchSlots > div {
+  min-height: 46px !important;
+}
+.bench-player {
+  font-size: 11px !important;
+  line-height: 1.05 !important;
+}
+@media (min-width: 901px) {
+  .slot {
+    width: 112px !important;
+    min-height: 56px !important;
+  }
+  .slot.filled .slot-player {
+    font-size: 11px !important;
+  }
+}
+@media (min-width: 1200px) {
+  .slot {
+    width: 126px !important;
+    min-height: 58px !important;
+  }
+  .slot.filled .slot-player {
+    font-size: 12px !important;
+  }
+}
+
 </style>
+
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-P3L0Q6BJWF"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-P3L0Q6BJWF');
+</script>
 </head>
 <body>
 <main class="app">
@@ -1468,10 +1526,10 @@ const formations = {
     ['ST','FW',40,20], ['ST','FW',60,20]
   ],
   '4231': [
-    ['GK','GK',50,92], ['LB','DF',18,72], ['CB','DF',39,72], ['CB','DF',61,72], ['RB','DF',82,72],
-    ['DM','MF',38,54], ['DM','MF',62,54],
-    ['LW','FW',24,34], ['CAM','MF',50,36], ['RW','FW',76,34],
-    ['ST','FW',50,18]
+    ['GK','GK',50,94], ['LB','DF',18,76], ['CB','DF',39,76], ['CB','DF',61,76], ['RB','DF',82,76],
+    ['DM','MF',35,56], ['DM','MF',65,56],
+    ['LW','FW',20,35], ['CAM','MF',50,42], ['RW','FW',80,35],
+    ['ST','FW',50,19]
   ]
 };
 function clearSelectableBenchSlots() {
@@ -1511,6 +1569,30 @@ function pickRatingForSlot(pick, slotPosition) {
   const player = findPlayerForPick(pick);
   return player ? ratingForSlot(player, slotPosition) : Number(pick.rating || 0);
 }
+
+function compactPlayerDisplayName(fullName) {
+  const original = String(fullName || '').trim();
+  if (!original) return '';
+  const particles = new Set(['de','del','della','der','den','van','von','da','dos','das','di','la','le','du','st','saint','mac','mc']);
+  const suffixes = new Set(['jr','junior','sr','ii','iii','iv']);
+  const parts = original.split(/\s+/).filter(Boolean);
+  if (parts.length <= 1) return original;
+  let last = parts[parts.length - 1].replace(/[.,]/g, '');
+  if (suffixes.has(last.toLowerCase()) && parts.length > 1) last = parts[parts.length - 2].replace(/[.,]/g, '');
+  let start = parts.length - 1;
+  if (suffixes.has(parts[start].replace(/[.,]/g, '').toLowerCase())) start -= 1;
+  while (start > 0 && particles.has(parts[start - 1].replace(/[.,]/g, '').toLowerCase())) start -= 1;
+  const surname = parts.slice(start, suffixes.has(parts[parts.length - 1].replace(/[.,]/g, '').toLowerCase()) ? parts.length - 1 : parts.length).join(' ');
+  if (surname.length >= 4) return surname;
+  return `${parts[0][0]}. ${surname}`;
+}
+function compactPositionsText(positions) {
+  return (Array.isArray(positions) ? positions : String(positions || '').split(/[|,\/]/))
+    .map(p => String(p).trim().toUpperCase())
+    .filter(Boolean)
+    .join(' • ');
+}
+
 function setFieldSlotContent(slot, pick) {
   const allowed = pickAllowedPositions(pick);
   const player = findPlayerForPick(pick);
@@ -1527,10 +1609,11 @@ function setFieldSlotContent(slot, pick) {
   slot.classList.add('filled');
   slot.classList.toggle('oop', fitType === 'oop' || Boolean(pick.outOfPosition));
   const oopHtml = (fitType === 'oop' || pick.outOfPosition) ? `<div class="oop-badge">OOP -7 OVR: ${baseRating}→${finalRating}</div>` : '';
-  slot.innerHTML = `${slot.dataset.position}<small>${allowed.join(' / ')}</small><div class="slot-player">${pick.player}</div><div class="slot-rating">OVR ${finalRating}</div>${oopHtml}`;
+  const displayName = compactPlayerDisplayName(pick.player);
+  slot.innerHTML = `${slot.dataset.position}<small>${compactPositionsText(allowed)}</small><div class="slot-player" title="${escapeAttr(pick.player)}">${displayName}</div><div class="slot-rating">OVR ${finalRating}</div>${oopHtml}`;
 }
 function setBenchSlotContent(slot, pick) {
-  const allowed = pickAllowedPositions(pick).join(' / ');
+  const allowed = compactPositionsText(pickAllowedPositions(pick));
   slot.dataset.filled = 'true';
   slot.dataset.player = pick.player;
   slot.dataset.team = pick.team;
@@ -1538,7 +1621,8 @@ function setBenchSlotContent(slot, pick) {
   slot.dataset.rating = String(pick.rating || '');
   slot.classList.add('filled');
   slot.classList.remove('selectable');
-  slot.innerHTML = `SUB ${slot.dataset.index}<small>${allowed}</small><div class="bench-player">${pick.player}</div><div class="slot-rating">OVR ${pick.rating}</div>`;
+  const displayName = compactPlayerDisplayName(pick.player);
+  slot.innerHTML = `SUB ${slot.dataset.index}<small>${allowed}</small><div class="bench-player" title="${escapeAttr(pick.player)}">${displayName}</div><div class="slot-rating">OVR ${pick.rating}</div>`;
 }
 function clearSelectedSub() {
   selectedSubIndex = null;
@@ -3132,10 +3216,10 @@ async function shareChallengeResult() {
     const file = blob ? new File([blob], 'world-cup-challenge-result.png', { type: 'image/png' }) : null;
     if (navigator.canShare && file && navigator.canShare({ files: [file] })) {
       await navigator.share({ title: 'Win the World Cup Challenge Result', text: `Challenge my team: ${url}`, files: [file] });
-      setChallengeShareStatus('Share sheet opened with your challenge result image and link.');
+      setChallengeShareStatus('');
     } else if (navigator.share) {
       await navigator.share({ title: 'Win the World Cup Challenge Result', text, url });
-      setChallengeShareStatus('Share sheet opened with your result and challenge link.');
+      setChallengeShareStatus('');
     } else {
       await navigator.clipboard.writeText(text);
       if (blob) {
@@ -3714,6 +3798,411 @@ loadChallengeFromUrl();
   document.addEventListener('DOMContentLoaded', refreshShareTeamPanel);
 })();
 
+
+
+/* GA4 GAME ANALYTICS - safe wrappers, no gameplay dependency */
+(function () {
+  const sentFlags = new Set();
+  function track(eventName, params) {
+    try {
+      const payload = Object.assign({
+        app: 'win_the_world_cup',
+        build: 'analytics_events_fixed'
+      }, params || {});
+      if (typeof window.gtag === 'function') {
+        window.gtag('event', eventName, payload);
+      } else {
+        window.dataLayer = window.dataLayer || [];
+        window.dataLayer.push(Object.assign({ event: eventName }, payload));
+      }
+    } catch (err) {
+      // Analytics must never break the game.
+    }
+  }
+  window.wcwTrack = track;
+
+  function once(key, eventName, params) {
+    if (sentFlags.has(key)) return;
+    sentFlags.add(key);
+    track(eventName, params);
+  }
+  function safeTeamName() {
+    try { return typeof getCustomTeamName === 'function' ? getCustomTeamName() : 'Untitled FC'; }
+    catch (err) { return 'Untitled FC'; }
+  }
+  function safeFormation() {
+    try { return formationSelect ? formationSelect.value : ''; }
+    catch (err) { return ''; }
+  }
+  function safeFormationLabel() {
+    try { return typeof currentFormationLabel === 'function' ? currentFormationLabel() : safeFormation(); }
+    catch (err) { return safeFormation(); }
+  }
+  function startersCount() {
+    try { return document.querySelectorAll('#pitch .slot[data-filled="true"]').length; }
+    catch (err) { return 0; }
+  }
+  function subsCount() {
+    try { return document.querySelectorAll('#benchSlots .bench-slot[data-filled="true"]').length; }
+    catch (err) { return 0; }
+  }
+  function checkTeamProgress() {
+    const xi = startersCount();
+    const subs = subsCount();
+    if (xi >= 1) once('first_player_drafted', 'first_player_drafted', {
+      team_name: safeTeamName(),
+      formation: safeFormation(),
+      formation_label: safeFormationLabel()
+    });
+    if (xi >= 11) once('xi_completed', 'xi_completed', {
+      team_name: safeTeamName(),
+      formation: safeFormation(),
+      formation_label: safeFormationLabel(),
+      starters: xi,
+      subs: subs
+    });
+    if (xi >= 11 && subs >= 3) once('team_completed', 'team_completed', {
+      team_name: safeTeamName(),
+      formation: safeFormation(),
+      formation_label: safeFormationLabel(),
+      starters: xi,
+      subs: subs
+    });
+  }
+
+  track('app_loaded', {
+    team_name: safeTeamName(),
+    formation: safeFormation(),
+    formation_label: safeFormationLabel()
+  });
+
+  if (spinBtn) {
+    spinBtn.addEventListener('click', function () {
+      if (spinPickPending || simulationHasRun || spinBtn.disabled) {
+        track('spin_blocked', {
+          reason: simulationHasRun ? 'simulation_complete' : 'pick_pending',
+          formation: safeFormation(),
+          team_name: safeTeamName()
+        });
+        return;
+      }
+      track('spin_started', {
+        team_name: safeTeamName(),
+        formation: safeFormation(),
+        formation_label: safeFormationLabel(),
+        starters: startersCount(),
+        subs: subsCount()
+      });
+    }, true);
+  }
+
+  if (formationSelect) {
+    formationSelect.addEventListener('change', function () {
+      track('formation_selected', {
+        formation: safeFormation(),
+        formation_label: safeFormationLabel(),
+        team_name: safeTeamName(),
+        locked: !!formationLocked,
+        starters: startersCount()
+      });
+    }, true);
+  }
+
+  if (customTeamNameInput) {
+    customTeamNameInput.addEventListener('change', function () {
+      track('team_name_updated', { team_name: safeTeamName() });
+    });
+  }
+
+  if (headerChallengeBtn) {
+    headerChallengeBtn.addEventListener('click', function () {
+      track('challenge_modal_opened', {
+        team_name: safeTeamName(),
+        formation: safeFormation(),
+        starters: startersCount(),
+        subs: subsCount()
+      });
+    }, true);
+  }
+
+  if (typeof renderTeam === 'function') {
+    const originalRenderTeam = renderTeam;
+    renderTeam = function (team) {
+      const result = originalRenderTeam.apply(this, arguments);
+      track('team_generated', {
+        source_team: team ? teamDisplayName(team) : '',
+        year: team && team.year ? String(team.year) : '',
+        players: team && team.players ? team.players.length : 0,
+        team_name: safeTeamName(),
+        formation: safeFormation()
+      });
+      return result;
+    };
+  }
+
+  if (typeof confirmFormationBeforeFirstPick === 'function') {
+    const originalConfirmFormation = confirmFormationBeforeFirstPick;
+    confirmFormationBeforeFirstPick = function () {
+      const beforeLocked = !!formationLocked;
+      const ok = originalConfirmFormation.apply(this, arguments);
+      if (!beforeLocked) {
+        track(ok ? 'formation_locked' : 'formation_lock_cancelled', {
+          team_name: safeTeamName(),
+          formation: safeFormation(),
+          formation_label: safeFormationLabel()
+        });
+      }
+      return ok;
+    };
+  }
+
+  if (typeof confirmOutOfPositionPlacement === 'function') {
+    const originalConfirmOop = confirmOutOfPositionPlacement;
+    confirmOutOfPositionPlacement = function (playerName, slotPosition, allowedPositions, baseRating, finalRating) {
+      track('out_of_position_warning_shown', {
+        player: playerName || '',
+        slot: slotPosition || '',
+        natural_positions: Array.isArray(allowedPositions) ? allowedPositions.join('|') : String(allowedPositions || ''),
+        base_rating: Number(baseRating || 0),
+        final_rating: Number(finalRating || 0),
+        formation: safeFormation(),
+        team_name: safeTeamName()
+      });
+      const ok = originalConfirmOop.apply(this, arguments);
+      track(ok ? 'out_of_position_accepted' : 'out_of_position_cancelled', {
+        player: playerName || '',
+        slot: slotPosition || '',
+        formation: safeFormation(),
+        team_name: safeTeamName()
+      });
+      return ok;
+    };
+  }
+
+  if (typeof placeSelectedPlayer === 'function') {
+    const originalPlaceSelectedPlayer = placeSelectedPlayer;
+    placeSelectedPlayer = function (slot) {
+      const before = startersCount();
+      const playerName = selectedPlayer && selectedPlayer.Player ? selectedPlayer.Player : '';
+      const slotPos = slot && slot.dataset ? slot.dataset.position : '';
+      const result = originalPlaceSelectedPlayer.apply(this, arguments);
+      const after = startersCount();
+      if (after > before) {
+        const filledSlot = slot && slot.dataset ? slot : null;
+        track('player_placed', {
+          player: playerName || (filledSlot ? filledSlot.dataset.player || '' : ''),
+          slot: slotPos,
+          pick_number: after,
+          out_of_position: filledSlot ? filledSlot.classList.contains('oop') : false,
+          rating: filledSlot ? Number(filledSlot.dataset.rating || 0) : 0,
+          team_name: safeTeamName(),
+          formation: safeFormation(),
+          formation_label: safeFormationLabel()
+        });
+        checkTeamProgress();
+      }
+      return result;
+    };
+  }
+
+  if (typeof placeSelectedSub === 'function') {
+    const originalPlaceSelectedSub = placeSelectedSub;
+    placeSelectedSub = function (slot) {
+      const before = subsCount();
+      const playerName = selectedPlayer && selectedPlayer.Player ? selectedPlayer.Player : '';
+      const result = originalPlaceSelectedSub.apply(this, arguments);
+      const after = subsCount();
+      if (after > before) {
+        track('sub_placed', {
+          player: playerName,
+          sub_number: after,
+          team_name: safeTeamName(),
+          formation: safeFormation()
+        });
+        checkTeamProgress();
+      }
+      return result;
+    };
+  }
+
+  if (typeof swapSelectedSubIntoField === 'function') {
+    const originalSwapSelectedSubIntoField = swapSelectedSubIntoField;
+    swapSelectedSubIntoField = function (fieldSlot) {
+      const incoming = selectedSubIndex !== null && subPicks[selectedSubIndex] ? subPicks[selectedSubIndex].player : '';
+      const outgoing = fieldSlot && fieldSlot.dataset ? fieldSlot.dataset.player : '';
+      const slotPos = fieldSlot && fieldSlot.dataset ? fieldSlot.dataset.position : '';
+      const result = originalSwapSelectedSubIntoField.apply(this, arguments);
+      track('sub_swapped_in', {
+        incoming_player: incoming,
+        outgoing_player: outgoing,
+        slot: slotPos,
+        team_name: safeTeamName(),
+        formation: safeFormation()
+      });
+      return result;
+    };
+  }
+
+  if (typeof simulateWorldCup === 'function') {
+    const originalSimulateWorldCup = simulateWorldCup;
+    simulateWorldCup = function () {
+      track('simulation_started', {
+        team_name: safeTeamName(),
+        formation: safeFormation(),
+        formation_label: safeFormationLabel(),
+        team_rating: typeof draftedTeamRating === 'function' ? draftedTeamRating() : 0,
+        starters: startersCount(),
+        subs: subsCount()
+      });
+      return originalSimulateWorldCup.apply(this, arguments);
+    };
+  }
+
+  if (typeof revealNextSimMatch === 'function') {
+    const originalRevealNextSimMatch = revealNextSimMatch;
+    revealNextSimMatch = function () {
+      const before = simRevealIndex;
+      const result = originalRevealNextSimMatch.apply(this, arguments);
+      if (simRevealIndex > before && simRevealMatches[simRevealIndex - 1]) {
+        const m = simRevealMatches[simRevealIndex - 1];
+        track('simulation_match_revealed', {
+          round: m.round,
+          opponent: m.opp,
+          goals_for: Number(m.gf || 0),
+          goals_against: Number(m.ga || 0),
+          result: Number(m.gf || 0) > Number(m.ga || 0) ? 'win' : Number(m.gf || 0) < Number(m.ga || 0) ? 'loss' : 'draw',
+          match_number: simRevealIndex,
+          team_name: safeTeamName(),
+          formation: safeFormation()
+        });
+      }
+      if (simRevealMatches.length && simRevealIndex >= simRevealMatches.length && simStoredSummary) {
+        once('simulation_finished_' + String(Date.now()), 'simulation_finished', {
+          team_name: safeTeamName(),
+          formation: safeFormation(),
+          final_position: simStoredSummary.finalPosition || '',
+          won_world_cup: simStoredSummary.finalPosition === 'World Cup Champions',
+          points: Number(simStoredSummary.points || 0),
+          gd: Number(simStoredSummary.gd || 0),
+          goals_for: Number(simStoredSummary.goalsFor || 0),
+          team_rating: Number(simStoredSummary.rating || 0)
+        });
+      }
+      return result;
+    };
+  }
+
+  if (typeof renderChampionScreen === 'function') {
+    const originalRenderChampionScreen = renderChampionScreen;
+    renderChampionScreen = function (summary, matches) {
+      const result = originalRenderChampionScreen.apply(this, arguments);
+      track('world_cup_won', {
+        team_name: safeTeamName(),
+        formation: safeFormation(),
+        formation_label: safeFormationLabel(),
+        team_rating: summary ? Number(summary.rating || 0) : 0,
+        goals_for: summary ? Number(summary.goalsFor || 0) : 0,
+        final_score: matches && matches.length ? `${matches[matches.length - 1].gf}-${matches[matches.length - 1].ga}` : ''
+      });
+      return result;
+    };
+  }
+
+  if (typeof openChallengeModal === 'function') {
+    const originalOpenChallengeModal = openChallengeModal;
+    openChallengeModal = function () {
+      track('challenge_opened', {
+        team_name: safeTeamName(),
+        formation: safeFormation(),
+        starters: startersCount(),
+        subs: subsCount()
+      });
+      return originalOpenChallengeModal.apply(this, arguments);
+    };
+  }
+
+  if (typeof shareChallengeCode === 'function') {
+    const originalShareChallengeCode = shareChallengeCode;
+    shareChallengeCode = async function () {
+      track('share_team_started', { team_name: safeTeamName(), formation: safeFormation() });
+      const result = await originalShareChallengeCode.apply(this, arguments);
+      track('share_team_completed', { team_name: safeTeamName(), formation: safeFormation() });
+      return result;
+    };
+  }
+
+  if (typeof importChallengeCode === 'function') {
+    const originalImportChallengeCode = importChallengeCode;
+    importChallengeCode = function () {
+      const result = originalImportChallengeCode.apply(this, arguments);
+      track('challenge_imported', {
+        team_name: safeTeamName(),
+        opponent_name: importedChallengeTeam && importedChallengeTeam.teamName ? importedChallengeTeam.teamName : '',
+        formation: safeFormation()
+      });
+      return result;
+    };
+  }
+
+  if (typeof revealNextChallengeMinute === 'function') {
+    const originalRevealNextChallengeMinute = revealNextChallengeMinute;
+    revealNextChallengeMinute = function () {
+      const wasIndex = challengeState ? challengeState.index : 0;
+      const wasFinished = challengeState ? !!challengeState.finished : false;
+      if (challengeState && wasIndex === 0 && !wasFinished) {
+        track('challenge_started', {
+          team_name: safeTeamName(),
+          opponent_name: challengeState.oppTeam && challengeState.oppTeam.teamName ? challengeState.oppTeam.teamName : '',
+          formation: safeFormation()
+        });
+      }
+      const result = originalRevealNextChallengeMinute.apply(this, arguments);
+      if (challengeState && challengeState.index > wasIndex && challengeState.events && challengeState.events[challengeState.index - 1]) {
+        const ev = challengeState.events[challengeState.index - 1];
+        track('challenge_minute_revealed', {
+          minute: Number(ev.minute || 0),
+          my_goals: Number(challengeState.myGoals || 0),
+          opponent_goals: Number(challengeState.oppGoals || 0),
+          team_name: safeTeamName(),
+          opponent_name: challengeState.oppTeam && challengeState.oppTeam.teamName ? challengeState.oppTeam.teamName : ''
+        });
+      }
+      if (challengeState && challengeState.finished && !wasFinished) {
+        const myGoals = Number(challengeState.myGoals || 0);
+        const oppGoals = Number(challengeState.oppGoals || 0);
+        track('challenge_completed', {
+          team_name: safeTeamName(),
+          opponent_name: challengeState.oppTeam && challengeState.oppTeam.teamName ? challengeState.oppTeam.teamName : '',
+          my_goals: myGoals,
+          opponent_goals: oppGoals,
+          result: myGoals > oppGoals ? 'win' : myGoals < oppGoals ? 'loss' : 'draw',
+          formation: safeFormation()
+        });
+      }
+      return result;
+    };
+  }
+
+  if (typeof shareWorldCupResult === 'function') {
+    const originalShareWorldCupResult = shareWorldCupResult;
+    shareWorldCupResult = async function () {
+      track('share_result_started', { source: 'simulation', team_name: safeTeamName(), formation: safeFormation() });
+      const result = await originalShareWorldCupResult.apply(this, arguments);
+      track('share_result', { source: 'simulation', team_name: safeTeamName(), formation: safeFormation() });
+      return result;
+    };
+  }
+
+  if (typeof shareChallengeResult === 'function') {
+    const originalShareChallengeResult = shareChallengeResult;
+    shareChallengeResult = async function () {
+      track('share_result_started', { source: 'challenge', team_name: safeTeamName(), formation: safeFormation() });
+      const result = await originalShareChallengeResult.apply(this, arguments);
+      track('share_result', { source: 'challenge', team_name: safeTeamName(), formation: safeFormation() });
+      return result;
+    };
+  }
+})();
 </script>
 </body>
 </html>
