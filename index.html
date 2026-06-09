@@ -2291,17 +2291,27 @@ function slotFitType(slotPosition, allowedPositions) {
   const slot = String(slotPosition || '').toUpperCase();
   const allowed = new Set((allowedPositions || []).map(p => String(p).toUpperCase()));
   if (allowed.has(slot)) return 'natural';
+
   // Treat central forward/striker slots as compatible central attacking spots.
   if ((slot === 'ST' || slot === 'CF') && (allowed.has('ST') || allowed.has('CF'))) return 'natural';
   if (slot === 'LCB' || slot === 'RCB') return (allowed.has('CB') || allowed.has(slot)) ? 'natural' : 'none';
   if (slot === 'LWB') return (allowed.has('LWB') || allowed.has('LB') || allowed.has('LM')) ? 'natural' : 'none';
   if (slot === 'RWB') return (allowed.has('RWB') || allowed.has('RB') || allowed.has('RM')) ? 'natural' : 'none';
 
-  // Out-of-position rules requested:
-  // - Strikers / centre-forwards may cover LW or RW, but lose OVR.
-  // - Centre-backs may cover LB or RB, but lose OVR.
+  // Out-of-position rules:
+  // - Strikers / centre-forwards may cover wide forward slots.
+  // - Centre-backs may cover fullback slots.
+  // - Wide midfield slots can be filled by same-side fullbacks, wingbacks, or wingers.
+  //   This prevents 4-4-2 drafts from getting blocked when there are no natural RM/LM players.
+  // - Wide forward slots can be filled by same-side wide mids/wingbacks if needed.
   if ((slot === 'LW' || slot === 'RW') && (allowed.has('ST') || allowed.has('CF'))) return 'oop';
   if ((slot === 'LB' || slot === 'RB') && allowed.has('CB')) return 'oop';
+
+  if (slot === 'RM' && (allowed.has('RW') || allowed.has('RWB') || allowed.has('RB'))) return 'oop';
+  if (slot === 'LM' && (allowed.has('LW') || allowed.has('LWB') || allowed.has('LB'))) return 'oop';
+  if (slot === 'RW' && (allowed.has('RM') || allowed.has('RWB'))) return 'oop';
+  if (slot === 'LW' && (allowed.has('LM') || allowed.has('LWB'))) return 'oop';
+
   return 'none';
 }
 
