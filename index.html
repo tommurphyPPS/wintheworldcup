@@ -2608,7 +2608,7 @@ function revealNextSimMatch() {
     const s = simStoredSummary;
     simFinalPosition.textContent = s.finalPosition;
     if (s.finalPosition === 'World Cup Champions') renderChampionScreen(s, simRevealMatches);
-    simFinalBox.innerHTML = `Final position: <b>${s.finalPosition}</b><br>Pool: <b>${s.points} pts</b>, GD <b>${s.gd >= 0 ? '+' : ''}${s.gd}</b>, GF <b>${s.goalsFor}</b><div class="sim-result-actions"><button id="shareWorldCupResultBtn">Share Result</button><button id="copyChallengeLinkResultBtn">Copy Challenge Link</button><button id="startNewDraftBtn" class="sim-new-draft-btn">Start New Draft</button></div><div id="worldCupResultShareStatus" class="sim-share-status"></div>`;
+    simFinalBox.innerHTML = `Final position: <b>${s.finalPosition}</b><br>Pool: <b>${s.points} pts</b>, GD <b>${s.gd >= 0 ? '+' : ''}${s.gd}</b>, GF <b>${s.goalsFor}</b><div class="sim-result-actions"><button id="shareWorldCupResultBtn">Share Result</button><button id="startNewDraftBtn" class="sim-new-draft-btn">Start New Draft</button></div><div id="worldCupResultShareStatus" class="sim-share-status"></div>`;
     simFinalBox.classList.add('show');
     nextMatchBtn.disabled = true;
     nextMatchBtn.textContent = 'Simulation complete';
@@ -3018,6 +3018,149 @@ async function copyWorldCupChallengeLink() {
     setWorldCupShareStatus('Could not copy the challenge link.');
   }
 }
+
+function setChallengeShareStatus(message) {
+  const el = document.getElementById('challengeResultShareStatus');
+  if (el) el.textContent = message || '';
+}
+function plainEventText(value) {
+  const div = document.createElement('div');
+  div.innerHTML = String(value || '');
+  return div.textContent || div.innerText || '';
+}
+function challengeResultShareText() {
+  if (!challengeState) throw new Error('Play a challenge match before sharing the result.');
+  const code = currentDraftChallengeCode();
+  const url = challengeShareUrl(code);
+  const myName = cleanCustomTeamName(challengeState.myTeam.teamName || challengeState.myTeam.name || getCustomTeamName());
+  const oppName = cleanCustomTeamName(challengeState.oppTeam.teamName || challengeState.oppTeam.name || 'Friend XI');
+  const g1 = Number(challengeState.myGoals || 0);
+  const g2 = Number(challengeState.oppGoals || 0);
+  const result = g1 > g2 ? `${myName} win` : g1 < g2 ? `${oppName} win` : 'Draw';
+  const goals = (challengeState.events || []).filter(ev => ev.isGoal).map(ev => `${ev.minute}' ${ev.mine ? myName : oppName}: ${ev.scorer}`).join('\n') || 'No goals';
+  return `Win the World Cup Challenge Result\n${myName} ${g1}-${g2} ${oppName}\n${result}\n\nGoals:\n${goals}\n\nChallenge my team:\n${url}\n\nCode: ${code}`;
+}
+function createChallengeResultCanvas() {
+  if (!challengeState) throw new Error('Play a challenge match before sharing the result.');
+  const code = currentDraftChallengeCode();
+  const url = challengeShareUrl(code);
+  const myName = cleanCustomTeamName(challengeState.myTeam.teamName || challengeState.myTeam.name || getCustomTeamName());
+  const oppName = cleanCustomTeamName(challengeState.oppTeam.teamName || challengeState.oppTeam.name || 'Friend XI');
+  const g1 = Number(challengeState.myGoals || 0);
+  const g2 = Number(challengeState.oppGoals || 0);
+  const result = g1 > g2 ? `${myName} WIN` : g1 < g2 ? `${oppName} WIN` : 'DRAW';
+  const canvas = document.createElement('canvas');
+  canvas.width = 1200;
+  canvas.height = 1600;
+  const ctx = canvas.getContext('2d');
+  const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  grad.addColorStop(0, '#26324e');
+  grad.addColorStop(0.48, '#101218');
+  grad.addColorStop(1, '#080a0f');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = 'rgba(242,193,78,0.10)';
+  ctx.beginPath();
+  ctx.arc(965, 180, 260, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#f2c14e';
+  ctx.font = '1000 48px Arial, sans-serif';
+  ctx.fillText('WIN THE WORLD CUP', 70, 105);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '1000 72px Arial, sans-serif';
+  wrapCanvasText(ctx, 'CHALLENGE RESULT', 70, 185, 980, 78, 2);
+  roundRectPath(ctx, 70, 310, 1060, 285, 34);
+  ctx.fillStyle = 'rgba(255,255,255,0.065)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.16)';
+  ctx.stroke();
+  ctx.fillStyle = '#aeb6c8';
+  ctx.font = '900 24px Arial, sans-serif';
+  ctx.fillText('FULL TIME', 110, 370);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '1000 44px Arial, sans-serif';
+  wrapCanvasText(ctx, myName, 110, 442, 430, 48, 2);
+  ctx.textAlign = 'center';
+  ctx.font = '1000 82px Arial, sans-serif';
+  ctx.fillText(`${g1}-${g2}`, 600, 470);
+  ctx.textAlign = 'left';
+  ctx.font = '1000 44px Arial, sans-serif';
+  wrapCanvasText(ctx, oppName, 690, 442, 390, 48, 2);
+  ctx.fillStyle = '#f2c14e';
+  ctx.font = '1000 34px Arial, sans-serif';
+  ctx.fillText(result, 110, 548);
+  ctx.fillStyle = '#f2c14e';
+  ctx.font = '1000 34px Arial, sans-serif';
+  ctx.fillText('MATCH EVENTS', 70, 690);
+  let y = 748;
+  (challengeState.events || []).forEach(ev => {
+    if (y > 1215) return;
+    roundRectPath(ctx, 70, y - 38, 1060, 66, 18);
+    ctx.fillStyle = ev.isGoal ? 'rgba(242,193,78,0.12)' : 'rgba(255,255,255,0.045)';
+    ctx.fill();
+    ctx.fillStyle = ev.isGoal ? '#f2c14e' : '#aeb6c8';
+    ctx.font = '900 22px Arial, sans-serif';
+    ctx.fillText(`${ev.minute}'`, 105, y);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '850 24px Arial, sans-serif';
+    wrapCanvasText(ctx, plainEventText(ev.text), 175, y, 900, 28, 1);
+    y += 78;
+  });
+  roundRectPath(ctx, 70, 1352, 1060, 160, 28);
+  ctx.fillStyle = 'rgba(242,193,78,0.12)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(242,193,78,0.45)';
+  ctx.stroke();
+  ctx.fillStyle = '#f2c14e';
+  ctx.font = '1000 28px Arial, sans-serif';
+  ctx.fillText('CHALLENGE THIS TEAM', 110, 1410);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '900 26px Arial, sans-serif';
+  wrapCanvasText(ctx, url, 110, 1454, 980, 34, 2);
+  ctx.fillStyle = '#aeb6c8';
+  ctx.font = '800 20px Arial, sans-serif';
+  ctx.fillText(`Code: ${code}`, 110, 1504);
+  return canvas;
+}
+async function shareChallengeResult() {
+  try {
+    const code = currentDraftChallengeCode();
+    const url = challengeShareUrl(code);
+    const text = challengeResultShareText();
+    const canvas = createChallengeResultCanvas();
+    const blob = await canvasToBlob(canvas);
+    const file = blob ? new File([blob], 'world-cup-challenge-result.png', { type: 'image/png' }) : null;
+    if (navigator.canShare && file && navigator.canShare({ files: [file] })) {
+      await navigator.share({ title: 'Win the World Cup Challenge Result', text: `Challenge my team: ${url}`, files: [file] });
+      setChallengeShareStatus('Share sheet opened with your challenge result image and link.');
+    } else if (navigator.share) {
+      await navigator.share({ title: 'Win the World Cup Challenge Result', text, url });
+      setChallengeShareStatus('Share sheet opened with your result and challenge link.');
+    } else {
+      await navigator.clipboard.writeText(text);
+      if (blob) {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'world-cup-challenge-result.png';
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      }
+      setChallengeShareStatus('Challenge result copied and the image downloaded.');
+    }
+  } catch (err) {
+    setChallengeShareStatus(err.message || 'Could not share this challenge result.');
+  }
+}
+async function copyChallengeResultLink() {
+  try {
+    const code = currentDraftChallengeCode();
+    const url = challengeShareUrl(code);
+    await navigator.clipboard.writeText(`Challenge my World Cup team:\n${url}\n\nCode: ${code}`);
+    setChallengeShareStatus('Challenge link copied. Send it to your friend.');
+  } catch (err) {
+    setChallengeShareStatus('Could not copy the challenge link.');
+  }
+}
 function averageChallengeRating(team) {
   if (!team || !Array.isArray(team.starters) || !team.starters.length) return 0;
   const avg = team.starters.reduce((sum, p) => sum + Number(p.rating || 0), 0) / team.starters.length;
@@ -3213,7 +3356,7 @@ function buildMinuteEvents(myTeam, oppTeam) {
       const verbs = ['big chance', 'shot saved', 'dangerous attack', 'corner pressure', 'near miss', 'counter attack', 'free kick chance'];
       text = `<b>${minute}'</b> ${mine ? cleanCustomTeamName(myTeam.teamName || myTeam.name) : cleanCustomTeamName(oppTeam.teamName || oppTeam.name || 'Friend XI')} ${verbs[idx % verbs.length]} through ${scorer.player}.`;
     }
-    return {minute, text, myGoals, oppGoals};
+    return {minute, text, myGoals, oppGoals, isGoal, mine, scorer: scorer.player};
   });
 }
 function startChallengeMatch() {
@@ -3275,7 +3418,7 @@ function revealNextChallengeMinute() {
     const g1 = challengeState.myGoals, g2 = challengeState.oppGoals;
     const result = g1 > g2 ? 'You win' : g1 < g2 ? 'Friend wins' : 'Draw';
     if (challengeMinute) challengeMinute.textContent = '90+ Full time';
-    if (challengeTimeline) challengeTimeline.innerHTML += `<div class="challenge-event"><b>Full time:</b> ${result}. Final score ${g1}-${g2}.</div>`;
+    if (challengeTimeline) challengeTimeline.innerHTML += `<div class="challenge-event"><b>Full time:</b> ${result}. Final score ${g1}-${g2}.</div><div class="sim-result-actions challenge-result-actions"><button id="shareChallengeResultBtn">Share Result</button></div><div id="challengeResultShareStatus" class="sim-share-status"></div>`;
     if (challengeNextMinuteBtn) {
       challengeNextMinuteBtn.disabled = true;
       challengeNextMinuteBtn.textContent = 'Match complete';
@@ -3375,6 +3518,8 @@ document.addEventListener('click', (event) => {
 document.addEventListener('click', (event) => {
   const shareBtn = event.target.closest('#shareWorldCupResultBtn');
   const copyBtn = event.target.closest('#copyChallengeLinkResultBtn');
+  const shareChallengeBtn = event.target.closest('#shareChallengeResultBtn');
+  const copyChallengeBtn = event.target.closest('#copyChallengeResultLinkBtn');
   if (shareBtn) {
     event.preventDefault();
     shareWorldCupResult();
@@ -3382,6 +3527,14 @@ document.addEventListener('click', (event) => {
   if (copyBtn) {
     event.preventDefault();
     copyWorldCupChallengeLink();
+  }
+  if (shareChallengeBtn) {
+    event.preventDefault();
+    shareChallengeResult();
+  }
+  if (copyChallengeBtn) {
+    event.preventDefault();
+    copyChallengeResultLink();
   }
 });
 
