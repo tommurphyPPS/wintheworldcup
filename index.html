@@ -2816,7 +2816,10 @@ function simulateWorldCup() {
 function renderSimulation(matches, rating, finalPosition, points, gd, goalsFor, playerStats = []) {
   simRevealMatches = matches;
   simRevealIndex = 0;
-  simStoredSummary = { rating, finalPosition, points, gd, goalsFor, playerStats };
+  const tournamentGoalsFor = matches.reduce((total, m) => total + Number(m.gf || 0), 0);
+  const tournamentGoalsAgainst = matches.reduce((total, m) => total + Number(m.ga || 0), 0);
+  const tournamentGD = tournamentGoalsFor - tournamentGoalsAgainst;
+  simStoredSummary = { rating, finalPosition, points, gd, goalsFor, tournamentGD, tournamentGoalsFor, tournamentGoalsAgainst, playerStats };
 
   if (simulationPanel) {
     simulationPanel.innerHTML = '';
@@ -2863,7 +2866,9 @@ function revealNextSimMatch() {
     const s = simStoredSummary;
     simFinalPosition.textContent = s.finalPosition;
     if (s.finalPosition === 'World Cup Champions') renderChampionScreen(s, simRevealMatches);
-    simFinalBox.innerHTML = `Final position: <b>${s.finalPosition}</b><br>Pool: <b>${s.points} pts</b>, GD <b>${s.gd >= 0 ? '+' : ''}${s.gd}</b>, GF <b>${s.goalsFor}</b><div class="sim-result-actions"><button id="shareWorldCupResultBtn">Share Result</button><button id="startNewDraftBtn" class="sim-new-draft-btn">Start New Draft</button></div><div id="worldCupResultShareStatus" class="sim-share-status"></div>`;
+    const tournamentGD = Number(s.tournamentGD || 0);
+    const tournamentGoalsFor = Number(s.tournamentGoalsFor || 0);
+    simFinalBox.innerHTML = `Final position: <b>${s.finalPosition}</b><br>Pool: <b>${s.points} pts</b> · Tournament GD: <b>${tournamentGD >= 0 ? '+' : ''}${tournamentGD}</b>, GF <b>${tournamentGoalsFor}</b><div class="sim-result-actions"><button id="shareWorldCupResultBtn">Share Result</button><button id="startNewDraftBtn" class="sim-new-draft-btn">Start New Draft</button></div><div id="worldCupResultShareStatus" class="sim-share-status"></div>`;
     simFinalBox.classList.add('show');
     nextMatchBtn.disabled = true;
     nextMatchBtn.textContent = 'Simulation complete';
@@ -3095,7 +3100,9 @@ function worldCupResultShareText() {
   const teamName = getCustomTeamName();
   const sourceTeam = currentTeam ? `${currentTeam.year} ${teamDisplayName(currentTeam)}` : 'Draft XI';
   const matches = (simRevealMatches || []).map(m => `${m.round}: ${teamName} ${m.gf}-${m.ga} ${m.opp}`).join('\n');
-  return `My Win the World Cup result: ${s.finalPosition || 'Tournament complete'}\nTeam: ${teamName}\nBuilt from: ${sourceTeam}\nOVR: ${s.rating || draftedTeamRating()}\nPool: ${s.points || 0} pts, GD ${Number(s.gd || 0) >= 0 ? '+' : ''}${s.gd || 0}, GF ${s.goalsFor || 0}\n\n${matches}\n\nChallenge this team:\n${url}\n\nCode: ${code}`;
+  const tournamentGD = Number(s.tournamentGD || 0);
+  const tournamentGoalsFor = Number(s.tournamentGoalsFor || 0);
+  return `My Win the World Cup result: ${s.finalPosition || 'Tournament complete'}\nTeam: ${teamName}\nBuilt from: ${sourceTeam}\nOVR: ${s.rating || draftedTeamRating()}\nPool: ${s.points || 0} pts · Tournament GD ${tournamentGD >= 0 ? '+' : ''}${tournamentGD}, GF ${tournamentGoalsFor}\n\n${matches}\n\nChallenge this team:\n${url}\n\nCode: ${code}`;
 }
 function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight, maxLines) {
   const words = String(text || '').split(/\s+/).filter(Boolean);
@@ -3185,8 +3192,8 @@ function createWorldCupResultCanvas() {
 
   const stats = [
     ['POOL', `${s.points || 0} pts`],
-    ['GD', `${Number(s.gd || 0) >= 0 ? '+' : ''}${s.gd || 0}`],
-    ['GF', String(s.goalsFor || 0)]
+    ['GD', `${Number(s.tournamentGD || 0) >= 0 ? '+' : ''}${s.tournamentGD || 0}`],
+    ['GF', String(s.tournamentGoalsFor || 0)]
   ];
   stats.forEach((item, i) => {
     const x = 110 + i * 260;
@@ -4254,8 +4261,8 @@ loadChallengeFromUrl();
           final_position: simStoredSummary.finalPosition || '',
           won_world_cup: simStoredSummary.finalPosition === 'World Cup Champions',
           points: Number(simStoredSummary.points || 0),
-          gd: Number(simStoredSummary.gd || 0),
-          goals_for: Number(simStoredSummary.goalsFor || 0),
+          gd: Number(simStoredSummary.tournamentGD || 0),
+          goals_for: Number(simStoredSummary.tournamentGoalsFor || 0),
           team_rating: Number(simStoredSummary.rating || 0)
         });
       }
