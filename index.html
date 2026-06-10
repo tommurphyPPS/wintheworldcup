@@ -1375,21 +1375,21 @@ seedSpecificPositionsForSquads();
       }
     },
     {
-      aliases: ['lev yashin'],
+      aliases: ['andriy shevchenko', 'shevchenko'],
       team: {
-        year: '1966', champion: 'Hero Soviet Union', group: 'Icons', iconPatch: true,
+        year: '2006', champion: 'Hero Ukraine', group: 'Icons', iconPatch: true,
         players: [
-          ['Lev Yashin','GK','GK',94,18,94],
-          ['Albert Shesternyov','CB','CB',90,52,90],
-          ['Murtaz Khurtsilava','CB','CB',87,52,87],
-          ['Vasili Danilov','RB','RB',84,55,84],
-          ['Valery Voronin','DM','DM|CM',89,72,84],
-          ['Jozsef Sabo','CM','CM|DM',86,76,76],
-          ['Igor Chislenko','RW','RW|LW',87,87,42],
-          ['Slava Metreveli','RW','RW|CF',88,88,42],
-          ['Anatoliy Banishevskiy','ST','ST',86,86,35],
-          ['Eduard Malofeyev','CF','CF|ST',85,85,36],
-          ['Galimzyan Khusainov','LW','LW',86,86,41]
+          ['Oleksandr Shovkovskyi','GK','GK',88,18,88],
+          ['Andriy Nesmachnyi','LB','LB|CB',84,57,84],
+          ['Vladyslav Vashchuk','CB','CB',84,50,84],
+          ['Andriy Rusol','CB','CB',85,51,85],
+          ['Oleh Husyev','RM','RM|RB|RW',84,78,72],
+          ['Anatoliy Tymoshchuk','DM','DM|CM',88,73,86],
+          ['Maksym Kalynychenko','LM','LM|CAM|CM',84,82,62],
+          ['Serhiy Rebrov','CF','CF|ST|CAM',86,86,45],
+          ['Andriy Voronin','CF','CF|ST',85,85,42],
+          ['Andriy Shevchenko','ST','ST|CF',93,93,44],
+          ['Artem Milevskyi','ST','ST|CF',82,82,38]
         ]
       }
     },
@@ -2843,6 +2843,17 @@ function renderSimulation(matches, rating, finalPosition, points, gd, goalsFor, 
   nextMatchBtn.textContent = 'Play first match';
 }
 
+function tournamentSummaryFromMatches(matches) {
+  const list = Array.isArray(matches) ? matches : [];
+  const gf = list.reduce((total, m) => total + Number(m.gf || 0), 0);
+  const ga = list.reduce((total, m) => total + Number(m.ga || 0), 0);
+  const gd = gf - ga;
+  const wins = list.filter(m => Number(m.gf || 0) > Number(m.ga || 0)).length;
+  const draws = list.filter(m => Number(m.gf || 0) === Number(m.ga || 0)).length;
+  const losses = list.filter(m => Number(m.gf || 0) < Number(m.ga || 0)).length;
+  return { gf, ga, gd, wins, draws, losses, record: `${wins}W ${draws}D ${losses}L` };
+}
+
 function revealNextSimMatch() {
   if (!simRevealMatches.length || simRevealIndex >= simRevealMatches.length) return;
   const m = simRevealMatches[simRevealIndex];
@@ -2866,9 +2877,8 @@ function revealNextSimMatch() {
     const s = simStoredSummary;
     simFinalPosition.textContent = s.finalPosition;
     if (s.finalPosition === 'World Cup Champions') renderChampionScreen(s, simRevealMatches);
-    const tournamentGD = Number(s.tournamentGD || 0);
-    const tournamentGoalsFor = Number(s.tournamentGoalsFor || 0);
-    simFinalBox.innerHTML = `Final position: <b>${s.finalPosition}</b><br>Pool: <b>${s.points} pts</b> · Tournament GD: <b>${tournamentGD >= 0 ? '+' : ''}${tournamentGD}</b>, GF <b>${tournamentGoalsFor}</b><div class="sim-result-actions"><button id="shareWorldCupResultBtn">Share Result</button><button id="startNewDraftBtn" class="sim-new-draft-btn">Start New Draft</button></div><div id="worldCupResultShareStatus" class="sim-share-status"></div>`;
+    const tournamentStats = tournamentSummaryFromMatches(simRevealMatches);
+    simFinalBox.innerHTML = `Final position: <b>${s.finalPosition}</b><br>Tournament: <b>${tournamentStats.record}</b> · GD <b>${tournamentStats.gd >= 0 ? '+' : ''}${tournamentStats.gd}</b>, GF <b>${tournamentStats.gf}</b>, GA <b>${tournamentStats.ga}</b><br>Group stage: <b>${s.points} pts</b><div class="sim-result-actions"><button id="shareWorldCupResultBtn">Share Result</button><button id="startNewDraftBtn" class="sim-new-draft-btn">Start New Draft</button></div><div id="worldCupResultShareStatus" class="sim-share-status"></div>`;
     simFinalBox.classList.add('show');
     nextMatchBtn.disabled = true;
     nextMatchBtn.textContent = 'Simulation complete';
@@ -3100,9 +3110,20 @@ function worldCupResultShareText() {
   const teamName = getCustomTeamName();
   const sourceTeam = currentTeam ? `${currentTeam.year} ${teamDisplayName(currentTeam)}` : 'Draft XI';
   const matches = (simRevealMatches || []).map(m => `${m.round}: ${teamName} ${m.gf}-${m.ga} ${m.opp}`).join('\n');
-  const tournamentGD = Number(s.tournamentGD || 0);
-  const tournamentGoalsFor = Number(s.tournamentGoalsFor || 0);
-  return `My Win the World Cup result: ${s.finalPosition || 'Tournament complete'}\nTeam: ${teamName}\nBuilt from: ${sourceTeam}\nOVR: ${s.rating || draftedTeamRating()}\nPool: ${s.points || 0} pts · Tournament GD ${tournamentGD >= 0 ? '+' : ''}${tournamentGD}, GF ${tournamentGoalsFor}\n\n${matches}\n\nChallenge this team:\n${url}\n\nCode: ${code}`;
+  const tournamentStats = tournamentSummaryFromMatches(simRevealMatches || []);
+  return `My Win the World Cup result: ${s.finalPosition || 'Tournament complete'}
+Team: ${teamName}
+Built from: ${sourceTeam}
+OVR: ${s.rating || draftedTeamRating()}
+Tournament: ${tournamentStats.record} · GD ${tournamentStats.gd >= 0 ? '+' : ''}${tournamentStats.gd}, GF ${tournamentStats.gf}, GA ${tournamentStats.ga}
+Group stage: ${s.points || 0} pts
+
+${matches}
+
+Challenge this team:
+${url}
+
+Code: ${code}`;
 }
 function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight, maxLines) {
   const words = String(text || '').split(/\s+/).filter(Boolean);
@@ -3190,10 +3211,11 @@ function createWorldCupResultCanvas() {
   ctx.fillText('OVR', 1085, 475);
   ctx.textAlign = 'left';
 
+  const tournamentStats = tournamentSummaryFromMatches(simRevealMatches || []);
   const stats = [
-    ['POOL', `${s.points || 0} pts`],
-    ['GD', `${Number(s.tournamentGD || 0) >= 0 ? '+' : ''}${s.tournamentGD || 0}`],
-    ['GF', String(s.tournamentGoalsFor || 0)]
+    ['RECORD', tournamentStats.record],
+    ['GD', `${tournamentStats.gd >= 0 ? '+' : ''}${tournamentStats.gd}`],
+    ['GF/GA', `${tournamentStats.gf}/${tournamentStats.ga}`]
   ];
   stats.forEach((item, i) => {
     const x = 110 + i * 260;
