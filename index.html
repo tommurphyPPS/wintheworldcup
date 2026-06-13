@@ -980,6 +980,17 @@ label[for="teamSelect"],
   }
 }
 
+
+/* POSITION DEDUPE UI PATCH */
+.slot.filled small,
+.bench-slot.filled small {
+  display: block !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: 100% !important;
+}
+
 </style>
 
 <!-- Google tag (gtag.js) -->
@@ -1747,16 +1758,47 @@ function compactPlayerDisplayName(fullName) {
   if (surname.length >= 4) return surname;
   return `${parts[0][0]}. ${surname}`;
 }
-function compactPositionsText(positions) {
+function uniquePositionsList(positions) {
+  const seen = new Set();
   return (Array.isArray(positions) ? positions : String(positions || '').split(/[|,\/]/))
     .map(p => String(p).trim().toUpperCase())
     .filter(Boolean)
-    .join(' • ');
+    .filter(pos => {
+      if (seen.has(pos)) return false;
+      seen.add(pos);
+      return true;
+    });
+}
+
+function compactPositionsText(positions) {
+  return uniquePositionsList(positions).join(' • ');
+}
+
+function compactPositionsWithMain(mainPosition, additionalPositions) {
+  const seen = new Set();
+  const parts = [];
+
+  function add(pos) {
+    const clean = String(pos || '').trim().toUpperCase();
+    if (!clean || seen.has(clean)) return;
+    seen.add(clean);
+    parts.push(clean);
+  }
+
+  add(mainPosition);
+  uniquePositionsList(additionalPositions).forEach(add);
+  return parts.join(' • ');
+}
+
+function pickPrimaryPosition(pick) {
+  const player = findPlayerForPick(pick);
+  return player ? String(player.Position || player.PrimaryPosition || '').trim().toUpperCase() : '';
 }
 
 function setFieldSlotContent(slot, pick) {
   const allowed = pickAllowedPositions(pick);
   const player = findPlayerForPick(pick);
+  const positionLine = compactPositionsWithMain(slot.dataset.position, allowed);
   const baseRating = player ? overallRating(player) : Number(pick.baseRating || pick.rating || 0);
   const finalRating = player ? ratingForSlot(player, slot.dataset.position) : Number(pick.rating || 0);
   const fitType = slotFitType(slot.dataset.position, allowed);
@@ -1771,10 +1813,11 @@ function setFieldSlotContent(slot, pick) {
   slot.classList.toggle('oop', fitType === 'oop' || Boolean(pick.outOfPosition));
   const oopHtml = (fitType === 'oop' || pick.outOfPosition) ? `<div class="oop-badge">OOP -7 OVR: ${baseRating}→${finalRating}</div>` : '';
   const displayName = compactPlayerDisplayName(pick.player);
-  slot.innerHTML = `${slot.dataset.position}<small>${compactPositionsText(allowed)}</small><div class="slot-player" title="${escapeAttr(pick.player)}">${displayName}</div><div class="slot-rating">OVR ${finalRating}</div>${oopHtml}`;
+  slot.innerHTML = `<small>${positionLine}</small><div class="slot-player" title="${escapeAttr(pick.player)}">${displayName}</div><div class="slot-rating">OVR ${finalRating}</div>${oopHtml}`;
 }
 function setBenchSlotContent(slot, pick) {
-  const allowed = compactPositionsText(pickAllowedPositions(pick));
+  const allowedPositions = pickAllowedPositions(pick);
+  const positionLine = compactPositionsWithMain(pickPrimaryPosition(pick) || allowedPositions[0] || '', allowedPositions);
   slot.dataset.filled = 'true';
   slot.dataset.player = pick.player;
   slot.dataset.team = pick.team;
@@ -1783,7 +1826,7 @@ function setBenchSlotContent(slot, pick) {
   slot.classList.add('filled');
   slot.classList.remove('selectable');
   const displayName = compactPlayerDisplayName(pick.player);
-  slot.innerHTML = `SUB ${slot.dataset.index}<small>${allowed}</small><div class="bench-player" title="${escapeAttr(pick.player)}">${displayName}</div><div class="slot-rating">OVR ${pick.rating}</div>`;
+  slot.innerHTML = `SUB ${slot.dataset.index}<small>${positionLine}</small><div class="bench-player" title="${escapeAttr(pick.player)}">${displayName}</div><div class="slot-rating">OVR ${pick.rating}</div>`;
 }
 function clearSelectedSub() {
   selectedSubIndex = null;
