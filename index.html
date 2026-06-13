@@ -1000,6 +1000,14 @@ label[for="teamSelect"],
   filter: drop-shadow(0 0 22px rgba(255,120,120,.45)) !important;
 }
 
+
+/* LOSS EXIT RESULT ORDER PATCH */
+.eventual-winner-line {
+  margin-top: 12px;
+  font-size: 20px;
+  font-weight: 1000;
+}
+
 </style>
 
 <!-- Google tag (gtag.js) -->
@@ -2864,7 +2872,7 @@ function renderNonChampionSummaryScreen(summary, matches) {
     : '<span>No assists recorded in exit game</span>';
 
   simStage.className = 'sim-stage champion-stage';
-  simStage.innerHTML = `<div class="sim-team-sheet"><div class="sim-team-sheet-head"><span>${teamName}</span><span>${stats.length}/11</span></div><div class="sim-team-row header"><div>Player</div><div>G</div><div>A</div><div>GC</div></div>${rows}</div><div class="sim-celebration non-champion-celebration"><div class="champion-copy"><div class="trophy-rise">💔</div><h2>BETTER LUCK<br><span>NEXT TIME</span></h2><p><span class="champion-user-team">${teamName}</span><br><small>${summary.finalPosition}</small></p><div class="champion-score-card"><div>Exit: ${exitScore}</div><div>Eventual winner: <span class="champion-user-team">${winner}</span></div><div class="final-detail-block"><b>Record</b><span>${tournamentStats.record}</span><span>GD ${tournamentStats.gd >= 0 ? '+' : ''}${tournamentStats.gd}</span><span>GF ${tournamentStats.gf}</span><span>GA ${tournamentStats.ga}</span></div><div class="final-detail-block"><b>Exit goals</b>${exitGoals}</div><div class="final-detail-block"><b>Exit assists</b>${exitAssists}</div></div></div></div>`;
+  simStage.innerHTML = `<div class="sim-team-sheet"><div class="sim-team-sheet-head"><span>${teamName}</span><span>${stats.length}/11</span></div><div class="sim-team-row header"><div>Player</div><div>G</div><div>A</div><div>GC</div></div>${rows}</div><div class="sim-celebration non-champion-celebration"><div class="champion-copy"><div class="trophy-rise">💔</div><h2>BETTER LUCK<br><span>NEXT TIME</span></h2><p><span class="champion-user-team">${teamName}</span><br><small>${summary.finalPosition}</small></p><div class="champion-score-card"><div>Exit: ${exitScore}</div><div class="final-detail-block"><b>Exit goals</b>${exitGoals}</div><div class="final-detail-block"><b>Exit assists</b>${exitAssists}</div><div class="final-detail-block"><b>Record</b><span>${tournamentStats.record}</span><span>GD ${tournamentStats.gd >= 0 ? '+' : ''}${tournamentStats.gd}</span><span>GF ${tournamentStats.gf}</span><span>GA ${tournamentStats.ga}</span></div><div class="eventual-winner-line">Eventual winner: <span class="champion-user-team">${winner}</span></div></div></div></div>`;
 }
 
 function simulateWorldCup() {
