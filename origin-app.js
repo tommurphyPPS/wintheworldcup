@@ -16,9 +16,15 @@ let lastTimelineEvents = [];
 let isWatching = false;
 let challengeOpponent = null;
 let draftPickNo = 1;
+let selectedCoach = null;
+let opponentCoach = null;
 
 const stateScreen = document.getElementById('stateScreen');
 const draftScreen = document.getElementById('draftScreen');
+const coachScreen = document.getElementById('coachScreen');
+const coachTitle = document.getElementById('coachTitle');
+const coachOptions = document.getElementById('coachOptions');
+const coachStatus = document.getElementById('coachStatus');
 const resetBtn = document.getElementById('resetBtn');
 const stateTitle = document.getElementById('stateTitle');
 const pickCount = document.getElementById('pickCount');
@@ -137,6 +143,106 @@ const CHEMISTRY_COMBOS = [
   { names: ['Cameron Munster','Harry Grant'], label: 'Modern Maroons deception', bonus: 5, stats: ['attack','speed'] }
 ];
 
+
+const COACHES = {
+  QLD: [
+    { id:'bennett', name:'Wayne Bennett', style:'Calm under pressure', desc:'Defence, composure and late-game error control.', boosts:{defence:1.2, clutch:1.1}, edge:1.25, power:'Calm Box', chance:0.12, powerText:'Bennett slows the game down and steadies the defensive line.' },
+    { id:'meninga-coach', name:'Mal Meninga', style:'Dynasty builder', desc:'Chemistry, leadership and Game 3 composure.', boosts:{aura:1.3, clutch:0.9}, edge:1.15, deciderEdge:1.2, power:'Dynasty Mentality', chance:0.11, powerText:'Meninga has this side looking like they have been here before.' },
+    { id:'slater-coach', name:'Billy Slater', style:'Modern speed and support', desc:'Fullback, edges, kick returns and support-play tries.', boosts:{speed:1.4, attack:0.8}, edge:1.1, power:'Support Sweep', chance:0.12, powerText:'Slater has the support runners flooding through the middle.' },
+    { id:'walters', name:'Kevin Walters', style:'Emotional lift', desc:'Momentum swings after tries, big tackles and crowd moments.', boosts:{aura:1.0, toughness:0.8}, edge:1.05, momentum:8, power:'Maroons Lift', chance:0.13, powerText:'Walters gets an emotional lift out of the Maroons.' }
+  ],
+  NSW: [
+    { id:'gould', name:'Phil Gould', style:'Defensive system', desc:'Line speed, discipline and Game 2 response.', boosts:{defence:1.4, toughness:0.6}, edge:1.2, power:'Blue Wall', chance:0.12, powerText:'Gould has the defensive system squeezing the ruck.' },
+    { id:'stuart', name:'Ricky Stuart', style:'Aggressive edge', desc:'Intensity, physicality and early-match pressure.', boosts:{toughness:1.3, defence:0.6}, edge:1.1, momentum:7, power:'Opening Ambush', chance:0.12, powerText:'Stuart has the Blues flying into the opening collisions.' },
+    { id:'fittler-coach', name:'Brad Fittler', style:'Attacking freedom', desc:'Offloads, broken-play attack and outside backs.', boosts:{attack:1.2, speed:0.9}, edge:1.1, power:'Freddy Ball', chance:0.12, powerText:'Fittler gives the outside backs licence to play what they see.' },
+    { id:'daley', name:'Laurie Daley', style:'Balanced Origin control', desc:'Kicking, composure and halves control.', boosts:{kicking:1.2, clutch:0.8}, edge:1.05, power:'Controlled Set', chance:0.11, powerText:'Daley keeps the halves patient and the kicking game tidy.' }
+  ]
+};
+
+function showCoachSelection() {
+  if (!coachScreen || !coachOptions) return beginDraft();
+  coachTitle.textContent = `Choose your ${DATA[selectedState].name} coach`;
+  coachStatus.textContent = 'Pick one coach. The opposition will secretly choose a coach too.';
+  coachOptions.innerHTML = '';
+  COACHES[selectedState].forEach(coach => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'coach-card';
+    btn.innerHTML = `<h3>${coach.name}</h3><p><strong>${coach.style}</strong></p><p>${coach.desc}</p><span>${coach.power}: rare match power-up</span>`;
+    btn.addEventListener('click', () => selectCoach(coach.id));
+    coachOptions.appendChild(btn);
+  });
+  stateScreen.classList.add('hidden');
+  coachScreen.classList.remove('hidden');
+  draftScreen.classList.add('hidden');
+  resetBtn.classList.remove('hidden');
+}
+
+function selectCoach(coachId) {
+  selectedCoach = COACHES[selectedState].find(c => c.id === coachId) || COACHES[selectedState][0];
+  opponentCoach = pick(COACHES[opponentState]);
+  beginDraft();
+}
+
+function beginDraft() {
+  if (coachScreen) coachScreen.classList.add('hidden');
+  stateScreen.classList.add('hidden');
+  draftScreen.classList.remove('hidden');
+  resetBtn.classList.remove('hidden');
+  renderRoster();
+  renderOppRoster();
+  updateProgress();
+  if (selectedCoach) {
+    squadName.textContent = `${selectedCoach.name} appointed`;
+    squadNote.textContent = `${selectedCoach.style}. Opposition coach: ${opponentCoach ? opponentCoach.name : 'unknown'}. Spin once to start the draft.`;
+  }
+}
+
+function coachFor(team) {
+  return team === 'user' ? selectedCoach : opponentCoach;
+}
+
+function coachStatBonus(team, stat) {
+  const c = coachFor(team);
+  return c && c.boosts && c.boosts[stat] ? c.boosts[stat] : 0;
+}
+
+function coachMatchEdge(gameNo) {
+  const user = selectedCoach || { edge:0 };
+  const opp = opponentCoach || { edge:0 };
+  let userEdge = user.edge || 0;
+  let oppEdge = opp.edge || 0;
+  const notes = [];
+  if (gameNo === 3) {
+    userEdge += user.deciderEdge || 0;
+    oppEdge += opp.deciderEdge || 0;
+  }
+  if (selectedCoach) notes.push(`${DATA[selectedState].name} coach: ${selectedCoach.name} — ${selectedCoach.style}`);
+  if (opponentCoach) notes.push(`${DATA[opponentState].name} coach: ${opponentCoach.name} — ${opponentCoach.style}`);
+  return { userEdge, oppEdge, notes };
+}
+
+function planCoachPowerEvents(gameNo) {
+  const events = [];
+  [['user', selectedCoach], ['opp', opponentCoach]].forEach(([team, coach]) => {
+    if (!coach) return;
+    let chance = coach.chance || 0.1;
+    if (gameNo === 3 && coach.deciderEdge) chance += 0.04;
+    if (Math.random() < chance) {
+      const minute = randBetween(18, 72);
+      events.push({ minute, team, kind:'coach', userPoints:0, oppPoints:0, momentum: team === 'user' ? (coach.momentum || 7) : -(coach.momentum || 7), text:`Coach power: ${coach.name} — ${coach.power}. ${coach.powerText}`, coachName: coach.name });
+    }
+  });
+  return events;
+}
+
+function renderCoachSummary() {
+  if (!selectedCoach && !opponentCoach) return '';
+  const c1 = selectedCoach ? `<p><strong>${DATA[selectedState].name} coach:</strong> ${selectedCoach.name} — ${selectedCoach.style}. <em>${selectedCoach.power}</em></p>` : '';
+  const c2 = opponentCoach ? `<p><strong>${DATA[opponentState].name} coach:</strong> ${opponentCoach.name} — ${opponentCoach.style}. <em>${opponentCoach.power}</em></p>` : '';
+  return `<div class="coach-summary">${c1}${c2}</div>`;
+}
+
 document.querySelectorAll('.state-btn').forEach(btn => btn.addEventListener('click', () => chooseState(btn.dataset.state)));
 spinBtn.addEventListener('click', spinSquad);
 resetBtn.addEventListener('click', resetGame);
@@ -155,12 +261,7 @@ function chooseState(state) {
   document.documentElement.style.setProperty('--oppStateColor', DATA[opponentState].colour);
   stateTitle.textContent = `${DATA[state].name} vs ${DATA[opponentState].name}`;
   oppRosterTitle.textContent = `${DATA[opponentState].name} 17`;
-  stateScreen.classList.add('hidden');
-  draftScreen.classList.remove('hidden');
-  resetBtn.classList.remove('hidden');
-  renderRoster();
-  renderOppRoster();
-  updateProgress();
+  showCoachSelection();
 }
 
 function spinSquad() {
@@ -623,6 +724,7 @@ function showSeriesSetup(resetSeries = true) {
         <div><strong>Opp starting 13</strong><span>${oppRating.total}</span></div>
         <div><strong>Matchup edge</strong><span>${matchup.edge > 0 ? '+' : ''}${matchup.edge}</span></div>
       </div>
+      ${renderCoachSummary()}
       <div class="compare-grid compact-compare">
         <div class="compare-side user-compare">
           <h4>${DATA[selectedState].name} strengths</h4>
@@ -803,6 +905,9 @@ function playNextGame() {
   const home = homeAdvantageForVenue(venue);
   const homeEdge = homeAdvantageEdge(venue);
   const seriesMods = calculateSeriesModifiers(gameNo, roster, opp);
+  const coachEdge = coachMatchEdge(gameNo);
+  if (coachEdge.notes.length) seriesMods.notes.push(...coachEdge.notes);
+  const coachEvents = planCoachPowerEvents(gameNo);
   const rareTraits = planRareTraitBoosts(gameNo, roster, opp, seriesMods);
   const benchPlan = planBenchRotations(roster, opp);
   if (homeEdge > 0) seriesMods.notes.push(home.label + ': +1.8 momentum edge');
@@ -812,7 +917,7 @@ function playNextGame() {
   const ratingEdge = (userRating - oppRating) * 0.42; // six overall points is a real edge, not an automatic win
   const matchupEdge = matchup.edge * 0.55;
   const randomEdge = (Math.random() * 13 - 6.5);
-  const diff = ratingEdge + matchupEdge + weatherModifier(weather, roster, opp) + homeEdge + seriesMods.userBoost - seriesMods.oppBoost + rareTraits.userEdge - rareTraits.oppEdge + benchPlan.userEdge - benchPlan.oppEdge + randomEdge;
+  const diff = ratingEdge + matchupEdge + weatherModifier(weather, roster, opp) + homeEdge + coachEdge.userEdge - coachEdge.oppEdge + seriesMods.userBoost - seriesMods.oppBoost + rareTraits.userEdge - rareTraits.oppEdge + benchPlan.userEdge - benchPlan.oppEdge + randomEdge;
   let [high, low] = pick(SCORE_PROFILES);
   let userScore = diff >= 0 ? high : low;
   let oppScore = diff >= 0 ? low : high;
@@ -840,6 +945,7 @@ function playNextGame() {
 
   lastGameStats = generateMatchStats(regulationUserScore, regulationOppScore, userScore, oppScore, matchup, weather, ref, opp, goldenPoint, venue, home);
   lastGameStats.seriesMods = seriesMods;
+  if (coachEvents.length) { rareTraits.events.push(...coachEvents); seriesMods.notes.push(...coachEvents.map(e => e.text)); }
   const events = generateGameEvents(gameNo, regulationUserScore, regulationOppScore, matchup, weather, ref, opp, goldenPoint, seriesMods, rareTraits, benchPlan);
   lastTimelineEvents = events;
   lastGameResult = { gameNo, userScore, oppScore, weather, ref, goldenPoint, seriesMods };
@@ -898,7 +1004,9 @@ function weatherModifier(weather, userRoster, oppRoster) {
 
 function teamAvg(targetRoster, key) {
   const slots = startingSlots(targetRoster).filter(s => s.player);
-  return slots.reduce((sum, s) => sum + effectiveStats(s.player, slotType(s.key))[key], 0) / Math.max(1, slots.length);
+  const base = slots.reduce((sum, s) => sum + effectiveStats(s.player, slotType(s.key))[key], 0) / Math.max(1, slots.length);
+  const team = targetRoster === roster ? 'user' : 'opp';
+  return base + coachStatBonus(team, key);
 }
 
 function renderGameShell(gameNo, weather, ref, goldenPoint, matchup, seriesMods) {
@@ -1033,6 +1141,12 @@ function commentatorLines(ev) {
     return {
       caller: raw,
       analyst: `This is where calm resolve and big-game kicking matter more than overall ratings.`
+    };
+  }
+  if (ev.kind === 'coach') {
+    return {
+      caller: raw,
+      analyst: `That's the coach's fingerprint on this game. It is a small edge, but in Origin small edges matter.`
     };
   }
   if (ev.kind === 'score') {
@@ -1578,6 +1692,7 @@ async function startFriendChallenge() {
     friendStatus.textContent = '';
     challengeStatus.textContent = `Friend challenge loaded: ${payload.stateName || DATA[payload.state].name}. Draft ${DATA[userState].name}, then play their squad instead of the AI.`;
     teamCode.value = friendCode.value.trim();
+    if (coachStatus) coachStatus.textContent = `Friend challenge loaded: ${payload.stateName || DATA[payload.state].name}. Choose your coach, then draft your ${DATA[userState].name} 17.`;
     squadName.textContent = 'Friend challenge loaded';
     squadNote.textContent = `${payload.stateName || DATA[payload.state].name} are already set. Spin to draft your ${DATA[userState].name} 17.`;
   } catch (e) {
@@ -1719,6 +1834,8 @@ function resetGame() {
   series = null;
   isWatching = false;
   challengeOpponent = null;
+  selectedCoach = null;
+  opponentCoach = null;
   document.body.classList.remove('challenge-mode');
   draftPickNo = 1;
   roster = POSITIONS.map(pos => ({ ...pos, player: null }));
@@ -1742,6 +1859,7 @@ function resetGame() {
   aiNote.textContent = 'After each of your picks, the opposition spins one historical squad from the other state, shows its options, and makes its selection.';
   spinBtn.disabled = rosterFull() || Boolean(currentSquad);
   stateScreen.classList.remove('hidden');
+  if (coachScreen) coachScreen.classList.add('hidden');
   draftScreen.classList.add('hidden');
   resetBtn.classList.add('hidden');
 }

@@ -549,3 +549,16 @@ h2 { margin: 0 0 10px; letter-spacing: -0.03em; }
 .pos-drop { color: #ffd166; font-size: 12px; font-weight: 950; margin-left: 4px; }
 .slot.legal div:last-child { font-weight: 950; color: var(--ok); }
 .slot.legal div:last-child:has(.pos-drop) { color: #ffd166; }
+
+
+/* v21 coach selection */
+.coach-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-top: 18px; }
+.coach-card { min-height: 178px; text-align: left; background: linear-gradient(135deg, rgba(243,193,92,.18), rgba(255,255,255,.07)); border: 1px solid rgba(243,193,92,.28); color: var(--text); box-shadow: none; }
+.coach-card h3 { margin: 0 0 8px; color: var(--gold); }
+.coach-card p { margin: 6px 0; color: var(--text); }
+.coach-card span { display: inline-block; margin-top: 8px; color: #1d1605; background: var(--gold); border-radius: 999px; padding: 5px 9px; font-size: 12px; font-weight: 900; }
+.coach-summary { border: 1px solid rgba(143,209,255,.22); background: rgba(143,209,255,.08); border-radius: 14px; padding: 12px; margin: 12px 0; }
+.coach-summary p { margin: 6px 0; }
+.prematch-mode .coach-screen,
+.simulation-mode .coach-screen,
+.summary-mode .coach-screen { display:none !important; }
