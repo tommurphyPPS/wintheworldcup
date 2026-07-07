@@ -209,7 +209,7 @@ function buildPositionRatings(name, primaryPositions, expandedPositions, rating)
     'Danny Buderus': { HK: 97, LK: 90 },
     'Robbie Farah': { HK: 93, HB: 88 },
     'Damien Cook': { HK: 92, LK: 86 },
-    'Harry Grant': { HK: 93, LK: 88 },
+    'Harry Grant': { HK: 94, LK: 88 },
     'Ben Hunt': { HB: 92, HK: 91, FE: 89 },
     'Paul Gallen': { LK: 97, PR: 95 },
     'Isaah Yeo': { LK: 94, PR: 90 },

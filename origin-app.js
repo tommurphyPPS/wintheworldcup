@@ -50,6 +50,19 @@ const SCORE_PROFILES = [
 ];
 
 const VENUES = ['Suncorp Stadium', 'Accor Stadium', 'Melbourne Cricket Ground'];
+function getVenueForGame(gameNo) { return VENUES[(gameNo - 1) % VENUES.length]; }
+function homeAdvantageForVenue(venue) {
+  if (venue.includes('Suncorp')) return { state: 'QLD', label: 'Queensland home-town advantage at Suncorp Stadium' };
+  if (venue.includes('Accor')) return { state: 'NSW', label: 'NSW home-town advantage at Accor Stadium' };
+  return { state: null, label: 'Neutral venue: no home-town advantage' };
+}
+function homeAdvantageEdge(venue) {
+  const home = homeAdvantageForVenue(venue);
+  if (!home.state) return 0;
+  if (home.state === selectedState) return 1.8;
+  if (home.state === opponentState) return -1.8;
+  return 0;
+}
 const WEATHER = ['Dry track', 'Heavy rain', 'Hot night', 'Slippery ball'];
 const REFS = ['Lets it flow', 'Strict ruck', 'Fast play-the-ball', 'Penalty happy'];
 
@@ -563,7 +576,7 @@ function opponentOptimiseScore(testRoster) {
 
 function showSeriesSetup(resetSeries = true) {
   if (!rosterFull()) return;
-  if (resetSeries || !series) series = { game: 1, userWins: 0, oppWins: 0, results: [] };
+  if (resetSeries || !series) series = { game: 1, userWins: 0, oppWins: 0, results: [], playerPoints: {} };
   optimiseOpponentLineup();
   selectedPlayer = null;
   moveFromKey = null;
@@ -768,11 +781,16 @@ function playNextGame() {
   const oppRating = getTeamRating(opp).total;
   const weather = pick(WEATHER);
   const ref = pick(REFS);
+  const venue = getVenueForGame(gameNo);
+  const home = homeAdvantageForVenue(venue);
+  const homeEdge = homeAdvantageEdge(venue);
   const seriesMods = calculateSeriesModifiers(gameNo, roster, opp);
+  if (homeEdge > 0) seriesMods.notes.push(home.label + ': +1.8 momentum edge');
+  if (homeEdge < 0) seriesMods.notes.push(home.label + ': opposition +1.8 momentum edge');
   const ratingEdge = (userRating - oppRating) * 0.42; // six overall points is a real edge, not an automatic win
   const matchupEdge = matchup.edge * 0.55;
   const randomEdge = (Math.random() * 13 - 6.5);
-  const diff = ratingEdge + matchupEdge + weatherModifier(weather, roster, opp) + seriesMods.userBoost - seriesMods.oppBoost + randomEdge;
+  const diff = ratingEdge + matchupEdge + weatherModifier(weather, roster, opp) + homeEdge + seriesMods.userBoost - seriesMods.oppBoost + randomEdge;
   let [high, low] = pick(SCORE_PROFILES);
   let userScore = diff >= 0 ? high : low;
   let oppScore = diff >= 0 ? low : high;
@@ -798,7 +816,7 @@ function playNextGame() {
     if (userWinsGolden) userScore += 1; else oppScore += 1;
   }
 
-  lastGameStats = generateMatchStats(regulationUserScore, regulationOppScore, userScore, oppScore, matchup, weather, ref, opp, goldenPoint);
+  lastGameStats = generateMatchStats(regulationUserScore, regulationOppScore, userScore, oppScore, matchup, weather, ref, opp, goldenPoint, venue, home);
   lastGameStats.seriesMods = seriesMods;
   const events = generateGameEvents(gameNo, regulationUserScore, regulationOppScore, matchup, weather, ref, opp, goldenPoint, seriesMods);
   lastTimelineEvents = events;
@@ -866,7 +884,8 @@ function renderGameShell(gameNo, weather, ref, goldenPoint, matchup, seriesMods)
   showMode('simulation');
   spinBtn.disabled = true;
   simulateBtn.disabled = true;
-  const venue = VENUES[(gameNo - 1) % VENUES.length];
+  const venue = getVenueForGame(gameNo);
+  const home = homeAdvantageForVenue(venue);
   const lead = seriesMods && seriesMods.notes.length ? seriesMods.notes.slice(0,2).map(n => `<li>${n}</li>`).join('') : '<li>No major series trait modifier before kick-off.</li>';
   simResult.innerHTML = `
     <div class="match-card simulation-page broadcast-page">
@@ -874,7 +893,7 @@ function renderGameShell(gameNo, weather, ref, goldenPoint, matchup, seriesMods)
         <div>
           <p class="eyebrow">Live Origin broadcast</p>
           <h2>Game ${gameNo} • ${venue}</h2>
-          <p class="muted">${weather} • ${ref}${goldenPoint ? ' • Golden point enabled' : ''}</p>
+          <p class="muted">${weather} • ${ref} • ${home.label}${goldenPoint ? ' • Golden point enabled' : ''}</p>
         </div>
         <div class="broadcast-clock" id="matchClock">Kick-off</div>
       </div>
@@ -919,7 +938,7 @@ function watchEvents(events, finalUserScore, finalOppScore) {
   const opening = document.createElement('div');
   opening.className = 'timeline-event neutral-final';
   opening.innerHTML = renderBroadcastLine({ minute: 0, kind: 'filler', team: 'neutral', text: 'Kick-off. The simulation will only pause for tries, momentum swings, matchup moments and key broadcast updates.' });
-  timeline.appendChild(opening);
+  timeline.prepend(opening);
   const timer = setInterval(() => {
     if (idx >= events.length) {
       clearInterval(timer);
@@ -930,7 +949,7 @@ function watchEvents(events, finalUserScore, finalOppScore) {
       const ft = document.createElement('div');
       ft.className = 'timeline-event neutral-final';
       ft.innerHTML = `<strong>${maxMinute}'</strong> FULL TIME`;
-      timeline.appendChild(ft);
+      timeline.prepend(ft);
       setTimeout(() => finishGame(finalUserScore, finalOppScore), 1400);
       return;
     }
@@ -955,8 +974,7 @@ function watchEvents(events, finalUserScore, finalOppScore) {
     const div = document.createElement('div');
     div.className = `timeline-event ${ev.kind || ''} ${ev.team === 'user' ? 'mine' : ev.team === 'opp' ? 'theirs' : ''}`;
     div.innerHTML = renderBroadcastLine({ ...ev, text });
-    timeline.appendChild(div);
-    div.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    timeline.prepend(div);
     if (liveStats) {
       const leader = momentum > 10 ? DATA[selectedState].name : momentum < -10 ? DATA[opponentState].name : 'Arm wrestle';
       liveStats.innerHTML = `<p><strong>Momentum:</strong> ${leader}</p><p><strong>Score:</strong> ${DATA[selectedState].name} ${currentUser}, ${DATA[opponentState].name} ${currentOpp}</p><p><strong>Last play:</strong> ${stripTags(text)}</p>`;
@@ -1034,7 +1052,8 @@ function finishGame(userScore, oppScore) {
   const gameNo = series.game;
   const won = userScore > oppScore;
   if (won) series.userWins += 1; else series.oppWins += 1;
-  series.results.push({ gameNo, userScore, oppScore, won });
+  const potm = awardSeriesPoints(lastTimelineEvents, won);
+  series.results.push({ gameNo, userScore, oppScore, won, potm });
   isWatching = false;
   renderPostGameSummary(gameNo, userScore, oppScore, won);
   spinBtn.disabled = rosterFull() || Boolean(currentSquad);
@@ -1053,6 +1072,7 @@ function renderPostGameSummary(gameNo, userScore, oppScore, won) {
       <p class="eyebrow">Post-game summary</p>
       <h2>${won ? 'Game won' : 'Game lost'}: ${DATA[selectedState].name} ${userScore} - ${oppScore} ${DATA[opponentState].name}</h2>
       <p>Series: ${DATA[selectedState].name} ${series.userWins}, ${DATA[opponentState].name} ${series.oppWins}</p>
+      ${series.results[series.results.length - 1] && series.results[series.results.length - 1].potm ? `<p><strong>Player of the Match:</strong> ${series.results[series.results.length - 1].potm.name}</p>` : ''}
       ${scorers}
       ${renderMatchStats(lastGameStats)}
       ${renderSeriesStory(lastGameStats)}
@@ -1075,11 +1095,51 @@ function renderScorerSummary(events) {
   return `<div class="try-summary"><div><h4>${DATA[selectedState].name} tries</h4><ul>${mine}</ul></div><div><h4>${DATA[opponentState].name} tries</h4><ul>${theirs}</ul></div></div>`;
 }
 
+
+function addSeriesPoints(name, team, points, tryInc = 0) {
+  if (!name || !series) return;
+  if (!series.playerPoints) series.playerPoints = {};
+  if (!series.playerPoints[name]) series.playerPoints[name] = { name, team, points: 0, tries: 0, gamesInfluenced: 0 };
+  series.playerPoints[name].points += points;
+  series.playerPoints[name].tries += tryInc;
+  series.playerPoints[name].gamesInfluenced += 1;
+}
+
+function awardSeriesPoints(events, userWon) {
+  const gameScores = {};
+  events.forEach(ev => {
+    if (!ev.playerName) return;
+    const pts = (ev.isTry ? 8 : 0) + (ev.kind === 'golden' ? 12 : 0) + (ev.kind === 'score' ? 4 : 0) + (ev.kind === 'matchup' ? 3 : 0) + (ev.kind === 'trait' ? 3 : 0);
+    const team = ev.team === 'user' ? selectedState : opponentState;
+    gameScores[ev.playerName] = (gameScores[ev.playerName] || 0) + pts;
+    addSeriesPoints(ev.playerName, team, pts, ev.isTry ? 1 : 0);
+  });
+  const winners = startingPlayers(userWon ? roster : getActiveOpponentRoster());
+  winners.forEach(p => addSeriesPoints(p.name, userWon ? selectedState : opponentState, 1, 0));
+  const top = Object.entries(gameScores).sort((a,b)=>b[1]-a[1])[0];
+  if (top) {
+    const record = series.playerPoints[top[0]];
+    record.potm = (record.potm || 0) + 1;
+    record.points += 6;
+    return { name: top[0], points: Math.round(record.points), team: record.team };
+  }
+  return null;
+}
+
+function renderPlayerOfSeries() {
+  if (!series || !series.playerPoints) return '';
+  const top = Object.values(series.playerPoints).sort((a,b)=>b.points-a.points)[0];
+  if (!top) return '';
+  const teamName = DATA[top.team] ? DATA[top.team].name : top.team;
+  return `<div class="player-of-series"><h3>Player of the Series</h3><p><strong>${top.name}</strong> — ${teamName}</p><p>${Math.round(top.points)} influence points • ${top.tries} tries • ${top.potm || 0} player-of-match awards</p></div>`;
+}
+
 function renderSeriesFinal() {
   showMode('summary');
   const won = series.userWins > series.oppWins;
-  const rows = series.results.map(r => `<li>Game ${r.gameNo}: ${DATA[selectedState].name} ${r.userScore} - ${r.oppScore} ${DATA[opponentState].name}</li>`).join('');
-  simResult.innerHTML = `<div class="post-game-page result-card final-series"><h2>${won ? 'Origin series won' : 'Series lost'}</h2><p>${DATA[selectedState].name} ${series.userWins} - ${series.oppWins} ${DATA[opponentState].name}</p><ul class="series-results">${rows}</ul><p class="muted">Export your side and challenge another drafted opponent, or generate a new team.</p><div class="button-row"><button class="ghost" onclick="exportTeam()">Export this team</button><button class="primary" onclick="resetGame()">Generate a new team</button></div></div>`;
+  const rows = series.results.map(r => `<li>Game ${r.gameNo}: ${DATA[selectedState].name} ${r.userScore} - ${r.oppScore} ${DATA[opponentState].name}${r.potm ? ` • Player of match: ${r.potm.name}` : ''}</li>`).join('');
+  const pots = renderPlayerOfSeries();
+  simResult.innerHTML = `<div class="post-game-page result-card final-series"><h2>${won ? 'Origin series won' : 'Series lost'}</h2><p>${DATA[selectedState].name} ${series.userWins} - ${series.oppWins} ${DATA[opponentState].name}</p><ul class="series-results">${rows}</ul>${pots}<p class="muted">Export your side and challenge another drafted opponent, or generate a new team.</p><div class="button-row"><button class="ghost" onclick="exportTeam()">Export this team</button><button class="primary" onclick="resetGame()">Generate a new team</button></div></div>`;
 }
 
 function generateGameEvents(gameNo, userScore, oppScore, matchup, weather, ref, oppRoster, goldenPoint, seriesMods) {
@@ -1115,7 +1175,8 @@ function generateGameEvents(gameNo, userScore, oppScore, matchup, weather, ref, 
 
   matchup.battles.slice(0, 4).forEach(b => {
     const team = b.diff >= 0 ? 'user' : 'opp';
-    const ev = { minute: findFreeMinute(used), team, kind: 'matchup', userPoints: 0, oppPoints: 0, momentum: team === 'user' ? 7 : -7, text: matchupText(b) };
+    const winner = b.diff >= 0 ? b.user : b.opp;
+    const ev = { minute: findFreeMinute(used), team, kind: 'matchup', userPoints: 0, oppPoints: 0, momentum: team === 'user' ? 7 : -7, text: matchupText(b), playerName: winner.name };
     used.add(ev.minute);
     events.push(ev);
   });
@@ -1135,7 +1196,7 @@ function generateGameEvents(gameNo, userScore, oppScore, matchup, weather, ref, 
     const p = selectEventPlayer(gpTeam === 'user' ? roster : oppRoster, 1);
     const teamName = gpTeam === 'user' ? DATA[selectedState].name : DATA[opponentState].name;
     events.push({ minute: 80, team: 'neutral', kind: 'golden', userPoints: 0, oppPoints: 0, momentum: 0, text: 'Scores are level after 80. We are into golden point.' });
-    events.push({ minute: goldenPoint.minute, team: gpTeam, kind: 'golden', userPoints: gpTeam === 'user' ? 1 : 0, oppPoints: gpTeam === 'opp' ? 1 : 0, momentum: gpTeam === 'user' ? 25 : -25, text: `${teamName}: ${p.name} nails the golden point field goal. Game over.` });
+    events.push({ minute: goldenPoint.minute, team: gpTeam, kind: 'golden', userPoints: gpTeam === 'user' ? 1 : 0, oppPoints: gpTeam === 'opp' ? 1 : 0, momentum: gpTeam === 'user' ? 25 : -25, text: `${teamName}: ${p.name} nails the golden point field goal. Game over.`, scorer: p.name, playerName: p.name });
   }
 
   let sorted = events.sort((a, b) => a.minute - b.minute);
@@ -1178,7 +1239,7 @@ function findFreeMinute(used) {
 }
 
 
-function generateMatchStats(regUserScore, regOppScore, finalUserScore, finalOppScore, matchup, weather, ref, oppRoster, goldenPoint) {
+function generateMatchStats(regUserScore, regOppScore, finalUserScore, finalOppScore, matchup, weather, ref, oppRoster, goldenPoint, venue, home) {
   const userRating = getTeamRating(roster).total;
   const oppRating = getTeamRating(oppRoster).total;
   const edge = userRating - oppRating + matchup.edge * 0.35;
@@ -1194,11 +1255,19 @@ function generateMatchStats(regUserScore, regOppScore, finalUserScore, finalOppS
   const oppPenalties = clampStat(Math.round(4 + Math.random() * 5 + (ref === 'Penalty happy' ? 2 : 0) - Math.max(0, -edge) / 18), 1, 10);
   const userMetres = clampStat(Math.round(1450 + userPoss * 8 + userLineBreaks * 65 + edge * 8 + Math.random() * 120), 1200, 2200);
   const oppMetres = clampStat(Math.round(1450 + oppPoss * 8 + oppLineBreaks * 65 - edge * 8 + Math.random() * 120), 1200, 2200);
+  const userTries = scoringParts(regUserScore).filter(points => points === 4 || points === 6).length;
+  const oppTries = scoringParts(regOppScore).filter(points => points === 4 || points === 6).length;
+  const userCarries = clampStat(Math.round(userMetres / 9.4 + Math.random() * 12), 130, 230);
+  const oppCarries = clampStat(Math.round(oppMetres / 9.4 + Math.random() * 12), 130, 230);
+  const userTackles = clampStat(Math.round(300 + oppPoss * 1.35 + oppCarries * 0.22 + Math.random() * 30), 280, 430);
+  const oppTackles = clampStat(Math.round(300 + userPoss * 1.35 + userCarries * 0.22 + Math.random() * 30), 280, 430);
+  const userTackleBusts = clampStat(Math.round(userLineBreaks * 3 + Math.max(0, edge) * 0.55 + Math.random() * 12), 8, 55);
+  const oppTackleBusts = clampStat(Math.round(oppLineBreaks * 3 + Math.max(0, -edge) * 0.55 + Math.random() * 12), 8, 55);
   const topBattle = matchup.battles[0];
   const reason = finalUserScore > finalOppScore
     ? `${DATA[selectedState].name} won it through ${topBattle && topBattle.diff >= 0 ? topBattle.user.name + ' winning his matchup' : 'better finishing under pressure'}.`
     : `${DATA[opponentState].name} won it through ${topBattle && topBattle.diff < 0 ? topBattle.opp.name + ' winning his matchup' : 'better field position and late control'}.`;
-  return { regUserScore, regOppScore, finalUserScore, finalOppScore, goldenPoint, userPoss, oppPoss, userCompletions, oppCompletions, userLineBreaks, oppLineBreaks, userErrors, oppErrors, userPenalties, oppPenalties, userMetres, oppMetres, reason };
+  return { regUserScore, regOppScore, finalUserScore, finalOppScore, goldenPoint, venue, home, userPoss, oppPoss, userCompletions, oppCompletions, userLineBreaks, oppLineBreaks, userErrors, oppErrors, userPenalties, oppPenalties, userMetres, oppMetres, userCarries, oppCarries, userTackles, oppTackles, userTackleBusts, oppTackleBusts, userTries, oppTries, reason };
 }
 
 
@@ -1220,12 +1289,17 @@ function renderMatchStats(stats) {
         <span>Stat</span><strong>${DATA[selectedState].name}</strong><strong>${DATA[opponentState].name}</strong>
         <span>Possession</span><b>${stats.userPoss}%</b><b>${stats.oppPoss}%</b>
         <span>Completion rate</span><b>${stats.userCompletions}%</b><b>${stats.oppCompletions}%</b>
+        <span>Tries scored</span><b>${stats.userTries}</b><b>${stats.oppTries}</b>
         <span>Line breaks</span><b>${stats.userLineBreaks}</b><b>${stats.oppLineBreaks}</b>
+        <span>Carries</span><b>${stats.userCarries}</b><b>${stats.oppCarries}</b>
+        <span>Tackles</span><b>${stats.userTackles}</b><b>${stats.oppTackles}</b>
+        <span>Tackle busts</span><b>${stats.userTackleBusts}</b><b>${stats.oppTackleBusts}</b>
         <span>Errors</span><b>${stats.userErrors}</b><b>${stats.oppErrors}</b>
         <span>Penalties conceded</span><b>${stats.userPenalties}</b><b>${stats.oppPenalties}</b>
         <span>Run metres</span><b>${stats.userMetres}</b><b>${stats.oppMetres}</b>
       </div>
       <p class="why-win"><strong>Why:</strong> ${stats.reason}</p>
+      <p class="why-win"><strong>Venue:</strong> ${stats.home ? stats.home.label : 'Neutral venue.'}</p>
     </div>`;
 }
 
@@ -1266,7 +1340,7 @@ function makeScoringEvent(team, points, matchup, oppRoster) {
   } else {
     text = `${teamName}: ${player.name} snaps a field goal under pressure: 1 point.`;
   }
-  return { minute: randMinute(), team, userPoints: user ? points : 0, oppPoints: user ? 0 : points, text, scorer: player.name, isTry: points === 4 || points === 6, points };
+  return { minute: randMinute(), team, userPoints: user ? points : 0, oppPoints: user ? 0 : points, text, scorer: player.name, playerName: player.name, isTry: points === 4 || points === 6, points };
 }
 
 function selectEventPlayer(targetRoster, points) {
@@ -1288,7 +1362,7 @@ function signatureEvent(targetRoster, team) {
   if (!players.length || Math.random() > 0.8) return null;
   const p = pick(players);
   const sig = SIGNATURES[p.name];
-  return { minute: randMinute(), team, userPoints: 0, oppPoints: 0, text: `${p.name} triggers ${sig.name}: ${sig.text}.` };
+  return { minute: randMinute(), team, userPoints: 0, oppPoints: 0, text: `${p.name} triggers ${sig.name}: ${sig.text}.`, playerName: p.name };
 }
 
 function neutralText(weather, ref, avoidText = '') {
