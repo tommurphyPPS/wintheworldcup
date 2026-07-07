@@ -25,6 +25,15 @@
           <button class="state-btn qld" data-state="QLD">Queensland Maroons</button>
           <button class="state-btn nsw" data-state="NSW">NSW Blues</button>
         </div>
+        <div class="friend-start">
+          <h3>Play a friend's squad</h3>
+          <p>Paste their Win The Origin challenge token. Their state becomes the opposition, then you draft the other state.</p>
+          <textarea id="friendCode" placeholder="Paste challenge token here"></textarea>
+          <div class="button-row centered-buttons">
+            <button id="startChallengeBtn" class="ghost" type="button">Play this challenge</button>
+          </div>
+          <p id="friendStatus" class="muted"></p>
+        </div>
       </section>
 
       <section id="draftScreen" class="hidden draft-layout">

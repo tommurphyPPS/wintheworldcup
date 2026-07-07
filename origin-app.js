@@ -40,6 +40,9 @@ const exportBtn = document.getElementById('exportBtn');
 const importBtn = document.getElementById('importBtn');
 const teamCode = document.getElementById('teamCode');
 const challengeStatus = document.getElementById('challengeStatus');
+const friendCode = document.getElementById('friendCode');
+const friendStatus = document.getElementById('friendStatus');
+const startChallengeBtn = document.getElementById('startChallengeBtn');
 const turnLabel = document.getElementById('turnLabel');
 const oppPickingBadge = document.getElementById('oppPickingBadge');
 const draftArena = document.getElementById('draftArena');
@@ -85,24 +88,33 @@ const POSITION_WEIGHTS = {
 };
 
 const SIGNATURES = {
-  'Johnathan Thurston': { name: 'Ice in the Veins', bonus: { clutch: 5, kicking: 4 }, text: 'late-game kicking and composure' },
-  'Andrew Johns': { name: 'Mastermind', bonus: { attack: 4, kicking: 5 }, text: 'reads the defence and controls territory' },
-  'Cameron Smith': { name: 'Control the Ruck', bonus: { defence: 3, clutch: 4, toughness: 2 }, text: 'wins the ruck and manages tempo' },
-  'Billy Slater': { name: 'Support Runner', bonus: { attack: 4, speed: 4 }, text: 'appears inside breaks' },
-  'Greg Inglis': { name: 'Beast Mode', bonus: { attack: 5, toughness: 4, speed: 2 }, text: 'dominates one-on-one contests' },
-  'Wally Lewis': { name: 'The King', bonus: { aura: 6, clutch: 4 }, text: 'lifts the whole side' },
-  'Darren Lockyer': { name: 'Calm General', bonus: { clutch: 4, kicking: 4 }, text: 'settles pressure moments' },
-  'Cooper Cronk': { name: 'System Master', bonus: { kicking: 4, clutch: 3 }, text: 'plays the percentages' },
-  'Allan Langer': { name: 'Alfie Chaos', bonus: { attack: 4, speed: 2, clutch: 2 }, text: 'creates broken-field chances' },
-  'Mal Meninga': { name: 'Power Centre', bonus: { attack: 4, toughness: 4 }, text: 'wins contact on the edge' },
-  'Dane Gagai': { name: 'Origin Specialist', bonus: { aura: 6, attack: 3 }, text: 'finds another gear in maroon' },
-  'Nathan Cleary': { name: 'Ice Controller', bonus: { kicking: 5, clutch: 4 }, text: 'pins corners and closes games' },
-  'Brad Fittler': { name: 'Freddy Flow', bonus: { attack: 4, clutch: 4 }, text: 'opens the game with instinct' },
-  'James Tedesco': { name: 'Relentless Runner', bonus: { attack: 3, speed: 3, toughness: 2 }, text: 'keeps taking tough carries' },
-  'Tom Trbojevic': { name: 'Turbo Mode', bonus: { attack: 5, speed: 4 }, text: 'turns half chances into tries' },
-  'Paul Gallen': { name: 'Never Back Down', bonus: { toughness: 5, defence: 3 }, text: 'drags the pack forward' },
-  'Payne Haas': { name: 'Relentless Motor', bonus: { toughness: 5, defence: 2 }, text: 'keeps output high late' },
-  'Danny Buderus': { name: 'Sharp Service', bonus: { attack: 2, defence: 3, clutch: 2 }, text: 'quickens the ruck' }
+  // Rare boosts only. These are not passive rating boosts; they trigger only in the right match context.
+  'Wally Lewis': { name: 'The King', tier: 'legendary', chance: 0.09, edge: 2.6, text: 'lifts Queensland when the match tightens' },
+  'Cameron Smith': { name: 'Calm Resolve', tier: 'legendary', chance: 0.10, edge: 2.4, text: 'slows the tempo and settles the side' },
+  'Johnathan Thurston': { name: 'Ice in the Veins', tier: 'legendary', chance: 0.09, edge: 2.5, text: 'owns late-game kicking pressure' },
+  'Andrew Johns': { name: 'Mastermind', tier: 'legendary', chance: 0.09, edge: 2.5, text: 'finds a tactical weakness and controls field position' },
+  'Darren Lockyer': { name: 'Big Game Captain', tier: 'legendary', chance: 0.08, edge: 2.2, text: 'keeps everyone composed under pressure' },
+  'Billy Slater': { name: 'Support Runner', tier: 'legendary', chance: 0.08, edge: 2.1, text: 'appears on the inside when a break opens up' },
+  'Greg Inglis': { name: 'Beast Mode', tier: 'legendary', chance: 0.08, edge: 2.2, text: 'takes over a one-on-one edge battle' },
+  'Brad Fittler': { name: 'Freddy Flow', tier: 'legendary', chance: 0.08, edge: 2.0, text: 'opens the match with instinctive running' },
+  'Cooper Cronk': { name: 'Game Manager', tier: 'legendary', chance: 0.07, edge: 1.9, text: 'turns pressure into repeat sets and territory' },
+  'Allan Langer': { name: 'Never Beaten', tier: 'legendary', chance: 0.08, edge: 2.0, text: 'creates chaos when the game looks lost' },
+  'Mal Meninga': { name: 'Power Centre', tier: 'legendary', chance: 0.07, edge: 1.9, text: 'wins the collision on the edge' },
+  'Arthur Beetson': { name: 'First Captain', tier: 'legendary', chance: 0.07, edge: 1.9, text: 'sets the tone through the middle' },
+  'Glenn Lazarus': { name: 'Brick Wall', tier: 'legendary', chance: 0.07, edge: 1.8, text: 'shuts down the middle third' },
+  'Shane Webcke': { name: 'Middle Enforcer', tier: 'legendary', chance: 0.07, edge: 1.8, text: 'changes the collision speed' },
+  'Danny Buderus': { name: 'Sharp Service', tier: 'legendary', chance: 0.07, edge: 1.7, text: 'quickens the ruck at the right time' },
+  'Paul Gallen': { name: 'Competitive Beast', tier: 'legendary', chance: 0.08, edge: 1.8, text: 'drags the pack forward after pressure' },
+  'Dane Gagai': { name: 'Origin Specialist', tier: 'hero', chance: 0.12, edge: 1.7, text: 'finds his Origin gear in a big moment' },
+  'Harry Grant': { name: 'Spark Plug', tier: 'hero', chance: 0.14, edge: 1.8, benchOnly: true, text: 'changes the tempo from dummy-half off the bench' },
+  'Ben Hunt': { name: 'Redemption Moment', tier: 'hero', chance: 0.10, edge: 1.4, text: 'settles after pressure and makes the next play count' },
+  'Michael Morgan': { name: 'Utility Hero', tier: 'hero', chance: 0.10, edge: 1.5, text: 'solves a backline problem in a clutch moment' },
+  'Matt Gillett': { name: 'Quiet Hero', tier: 'hero', chance: 0.10, edge: 1.4, text: 'does the hidden work that turns a set' },
+  'Brett Morris': { name: 'Big Game Finisher', tier: 'hero', chance: 0.10, edge: 1.4, text: 'turns a half chance into points' },
+  'Josh Addo-Carr': { name: 'Flying Foxx', tier: 'hero', chance: 0.10, edge: 1.4, text: 'burns the defence when the game opens up' },
+  'Steve Renouf': { name: 'The Pearl', tier: 'hero', chance: 0.10, edge: 1.5, text: 'slices through broken defensive shape' },
+  'Brett Kenny': { name: 'Silky Runner', tier: 'hero', chance: 0.09, edge: 1.4, text: 'glides through a tired defensive line' },
+  'Trevor Gillmeister': { name: 'Axe Defence', tier: 'hero', chance: 0.10, edge: 1.5, text: 'lands a momentum-shifting defensive shot' }
 };
 
 const SERIES_TRAITS = {
@@ -129,8 +141,9 @@ document.querySelectorAll('.state-btn').forEach(btn => btn.addEventListener('cli
 spinBtn.addEventListener('click', spinSquad);
 resetBtn.addEventListener('click', resetGame);
 simulateBtn.addEventListener('click', showSeriesSetup);
-exportBtn.addEventListener('click', exportTeam);
-importBtn.addEventListener('click', importOpponent);
+exportBtn.addEventListener('click', () => exportTeam());
+importBtn.addEventListener('click', () => importOpponent());
+if (startChallengeBtn) startChallengeBtn.addEventListener('click', () => startFriendChallenge());
 
 function chooseState(state) {
   selectedState = state;
@@ -248,13 +261,19 @@ function placeSelectedPlayer(slotKey) {
   addDraftLog(`Pick ${draftPickNo}: You took ${selectedPlayer.name} from ${currentSquad.name} at ${rosterSlot.key} (${candidateSlotLabel(selectedPlayer, rosterSlot)}).`);
   selectedPlayer = null;
   currentSquad = null;
+  renderRoster();
+  updateProgress();
+  if (challengeOpponent) {
+    draftPickNo += 1;
+    choices.innerHTML = `<p class="muted">Player drafted. Your friend's 17 is already loaded as the opposition.</p>`;
+    setTimeout(turnBackToUser, 350);
+    return;
+  }
   choices.innerHTML = '<p class="muted">Player drafted. The same draft screen now flips to the opposition pick.</p>';
   draftArena.classList.remove('active-user-turn');
   draftArena.classList.add('active-opp-turn');
   squadName.textContent = 'Opposition pick coming';
   squadNote.textContent = 'Opposition will spin on this same screen, view the squad options, then choose their player.';
-  renderRoster();
-  updateProgress();
   setTimeout(runAiDraftPick, 500);
 }
 
@@ -322,7 +341,7 @@ function chooseAiPlayer(options) {
     slots.forEach(slot => {
       const type = slotType(slot.key);
       let score = weightedPlayerScore(player, type);
-      if (SIGNATURES[player.name]) score += 4;
+      if (SIGNATURES[player.name]) score += SIGNATURES[player.name].tier === 'legendary' ? 3 : 1.5;
       CHEMISTRY_COMBOS.forEach(c => {
         if (c.names.includes(player.name) && c.names.some(n => names.includes(n))) score += c.bonus;
       });
@@ -707,8 +726,7 @@ function effectiveStats(player, positionType = null) {
   const ratingDelta = positionType ? positionRating(player, positionType) - player.rating : 0;
   const stats = { ...player.stats };
   if (ratingDelta) Object.keys(stats).forEach(key => stats[key] = clamp(stats[key] + ratingDelta));
-  const sig = SIGNATURES[player.name];
-  if (sig) Object.entries(sig.bonus).forEach(([key, value]) => stats[key] = clamp((stats[key] || player.rating) + value));
+  // Signature traits are rare match events, not passive always-on rating boosts.
   return stats;
 }
 
@@ -785,12 +803,16 @@ function playNextGame() {
   const home = homeAdvantageForVenue(venue);
   const homeEdge = homeAdvantageEdge(venue);
   const seriesMods = calculateSeriesModifiers(gameNo, roster, opp);
+  const rareTraits = planRareTraitBoosts(gameNo, roster, opp, seriesMods);
+  const benchPlan = planBenchRotations(roster, opp);
   if (homeEdge > 0) seriesMods.notes.push(home.label + ': +1.8 momentum edge');
   if (homeEdge < 0) seriesMods.notes.push(home.label + ': opposition +1.8 momentum edge');
+  if (rareTraits.notes.length) seriesMods.notes.push(...rareTraits.notes);
+  if (benchPlan.notes.length) seriesMods.notes.push(...benchPlan.notes.slice(0, 2));
   const ratingEdge = (userRating - oppRating) * 0.42; // six overall points is a real edge, not an automatic win
   const matchupEdge = matchup.edge * 0.55;
   const randomEdge = (Math.random() * 13 - 6.5);
-  const diff = ratingEdge + matchupEdge + weatherModifier(weather, roster, opp) + homeEdge + seriesMods.userBoost - seriesMods.oppBoost + randomEdge;
+  const diff = ratingEdge + matchupEdge + weatherModifier(weather, roster, opp) + homeEdge + seriesMods.userBoost - seriesMods.oppBoost + rareTraits.userEdge - rareTraits.oppEdge + benchPlan.userEdge - benchPlan.oppEdge + randomEdge;
   let [high, low] = pick(SCORE_PROFILES);
   let userScore = diff >= 0 ? high : low;
   let oppScore = diff >= 0 ? low : high;
@@ -818,7 +840,7 @@ function playNextGame() {
 
   lastGameStats = generateMatchStats(regulationUserScore, regulationOppScore, userScore, oppScore, matchup, weather, ref, opp, goldenPoint, venue, home);
   lastGameStats.seriesMods = seriesMods;
-  const events = generateGameEvents(gameNo, regulationUserScore, regulationOppScore, matchup, weather, ref, opp, goldenPoint, seriesMods);
+  const events = generateGameEvents(gameNo, regulationUserScore, regulationOppScore, matchup, weather, ref, opp, goldenPoint, seriesMods, rareTraits, benchPlan);
   lastTimelineEvents = events;
   lastGameResult = { gameNo, userScore, oppScore, weather, ref, goldenPoint, seriesMods };
   renderGameShell(gameNo, weather, ref, goldenPoint, matchup, seriesMods);
@@ -1025,10 +1047,16 @@ function commentatorLines(ev) {
       analyst: `That is the kind of one-on-one battle the coach can target. The bench and edge shape can change this before the next game.`
     };
   }
+  if (ev.kind === 'bench') {
+    return {
+      caller: raw,
+      analyst: `Fresh legs matter in Origin. The bench does not inflate the pre-game overall, but it can change the middle battle once fatigue hits.`
+    };
+  }
   if (ev.kind === 'trait') {
     return {
       caller: raw,
-      analyst: `Those Origin traits are not cosmetic. They shift composure, error risk and momentum when the series tightens.`
+      analyst: `That is a rare Origin boost. Most games are still decided by ratings, matchups and fatigue — these moments only cut through occasionally.`
     };
   }
   return {
@@ -1142,7 +1170,106 @@ function renderSeriesFinal() {
   simResult.innerHTML = `<div class="post-game-page result-card final-series"><h2>${won ? 'Origin series won' : 'Series lost'}</h2><p>${DATA[selectedState].name} ${series.userWins} - ${series.oppWins} ${DATA[opponentState].name}</p><ul class="series-results">${rows}</ul>${pots}<p class="muted">Export your side and challenge another drafted opponent, or generate a new team.</p><div class="button-row"><button class="ghost" onclick="exportTeam()">Export this team</button><button class="primary" onclick="resetGame()">Generate a new team</button></div></div>`;
 }
 
-function generateGameEvents(gameNo, userScore, oppScore, matchup, weather, ref, oppRoster, goldenPoint, seriesMods) {
+
+function planRareTraitBoosts(gameNo, userRoster, oppRoster, seriesMods) {
+  const userEvents = selectRareTraitEvents(userRoster, 'user', gameNo, seriesMods);
+  const oppEvents = selectRareTraitEvents(oppRoster, 'opp', gameNo, seriesMods);
+  const userEdge = userEvents.reduce((sum, ev) => sum + (ev.edge || 0), 0);
+  const oppEdge = oppEvents.reduce((sum, ev) => sum + (ev.edge || 0), 0);
+  const notes = [];
+  if (userEvents.length) notes.push(`${DATA[selectedState].name} rare trait: ${userEvents.map(e => e.playerName + ' — ' + e.signature).join(', ')}`);
+  if (oppEvents.length) notes.push(`${DATA[opponentState].name} rare trait: ${oppEvents.map(e => e.playerName + ' — ' + e.signature).join(', ')}`);
+  return { userEdge, oppEdge, events: [...userEvents, ...oppEvents], notes };
+}
+
+function selectRareTraitEvents(targetRoster, team, gameNo, seriesMods) {
+  const slots = targetRoster.filter(s => s.player && SIGNATURES[s.player.name]);
+  const out = [];
+  slots.forEach(slot => {
+    const player = slot.player;
+    const sig = SIGNATURES[player.name];
+    const isBench = slot.key.startsWith('B');
+    if (sig.benchOnly && !isBench) return;
+    let chance = sig.chance || 0.08;
+    if (gameNo === 3 && SERIES_TRAITS.decider.includes(player.name)) chance += 0.05;
+    if (series && series.results && series.results.length) {
+      const last = series.results[series.results.length - 1];
+      const teamLostLast = team === 'user' ? !last.won : last.won;
+      if (teamLostLast && SERIES_TRAITS.competitive.includes(player.name)) chance += 0.04;
+    }
+    // Keep boosts rare even when the conditions are right.
+    chance = Math.min(chance, sig.tier === 'legendary' ? 0.16 : 0.18);
+    if (Math.random() < chance) {
+      const minute = sig.benchOnly ? randBetween(42, 66) : (gameNo === 3 ? randBetween(55, 79) : randBetween(18, 76));
+      const sideName = team === 'user' ? DATA[selectedState].name : DATA[opponentState].name;
+      out.push({
+        minute,
+        team,
+        kind: 'trait',
+        userPoints: 0,
+        oppPoints: 0,
+        momentum: team === 'user' ? 9 : -9,
+        edge: sig.edge || 1.5,
+        signature: sig.name,
+        playerName: player.name,
+        text: `${sideName}: ${player.name} produces a rare ${sig.name} moment — ${sig.text}.`
+      });
+    }
+  });
+  // Two rare boosts from the same side in one match is usually too much.
+  return out.sort((a,b) => (SIGNATURES[b.playerName].edge || 0) - (SIGNATURES[a.playerName].edge || 0)).slice(0, 1);
+}
+
+function planBenchRotations(userRoster, oppRoster) {
+  const userEvents = createBenchEvents(userRoster, 'user');
+  const oppEvents = createBenchEvents(oppRoster, 'opp');
+  const userEdge = benchImpact(userRoster) * 0.06;
+  const oppEdge = benchImpact(oppRoster) * 0.06;
+  const notes = [];
+  if (userEvents.length) notes.push(`${DATA[selectedState].name} bench impact: ${userEvents.map(e => e.playerName).join(', ')}`);
+  if (oppEvents.length) notes.push(`${DATA[opponentState].name} bench impact: ${oppEvents.map(e => e.playerName).join(', ')}`);
+  return { userEdge, oppEdge, events: [...userEvents, ...oppEvents], notes };
+}
+
+function createBenchEvents(targetRoster, team) {
+  const bench = targetRoster.filter(s => s.key.startsWith('B') && s.player);
+  const minutes = [24, 43, 57, 66];
+  return bench.slice(0, 4).map((slot, index) => {
+    const player = slot.player;
+    const sig = SIGNATURES[player.name];
+    const sideName = team === 'user' ? DATA[selectedState].name : DATA[opponentState].name;
+    const impact = Math.round(weightedPlayerScore(player, bestBenchType(player)));
+    const spark = sig && sig.benchOnly && Math.random() < 0.22;
+    return {
+      minute: minutes[index] + Math.floor(Math.random() * 4) - 1,
+      team,
+      kind: spark ? 'trait' : 'bench',
+      userPoints: 0,
+      oppPoints: 0,
+      momentum: team === 'user' ? (spark ? 8 : 3) : (spark ? -8 : -3),
+      playerName: player.name,
+      text: spark
+        ? `${sideName}: ${player.name} comes off the bench and sparks the ruck. ${sig.name} gives them a short burst of tempo.`
+        : `${sideName}: ${player.name} enters from the bench. Fresh legs into the contest (impact ${impact}).`
+    };
+  });
+}
+
+function bestBenchType(player) {
+  if (!player || !player.positions) return 'B';
+  const preferred = ['PR','LK','ED','HK','FE','HB','CE','WG','FB'];
+  return preferred.find(pos => player.positions.includes(pos)) || 'B';
+}
+
+function benchImpact(targetRoster) {
+  const bench = targetRoster.filter(s => s.key.startsWith('B') && s.player);
+  if (!bench.length) return 0;
+  return bench.reduce((sum, s) => sum + (weightedPlayerScore(s.player, bestBenchType(s.player)) - 84), 0) / bench.length;
+}
+
+function randBetween(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+function generateGameEvents(gameNo, userScore, oppScore, matchup, weather, ref, oppRoster, goldenPoint, seriesMods, rareTraits = null, benchPlan = null) {
   const events = [];
   const used = new Set();
   events.push({ minute: 3, team: 'neutral', kind: 'filler', userPoints: 0, oppPoints: 0, momentum: 0, text: neutralText(weather, ref) });
@@ -1181,10 +1308,8 @@ function generateGameEvents(gameNo, userScore, oppScore, matchup, weather, ref, 
     events.push(ev);
   });
 
-  const sigUser = signatureEvent(roster, 'user');
-  if (sigUser) { sigUser.minute = findFreeMinute(used); sigUser.kind = 'trait'; sigUser.momentum = 7; used.add(sigUser.minute); events.push(sigUser); }
-  const sigOpp = signatureEvent(oppRoster, 'opp');
-  if (sigOpp) { sigOpp.minute = findFreeMinute(used); sigOpp.kind = 'trait'; sigOpp.momentum = -7; used.add(sigOpp.minute); events.push(sigOpp); }
+  (benchPlan && benchPlan.events ? benchPlan.events : []).forEach(ev => { ev.minute = findFreeMinute(used, ev.minute); used.add(ev.minute); events.push(ev); });
+  (rareTraits && rareTraits.events ? rareTraits.events : []).forEach(ev => { ev.minute = findFreeMinute(used, ev.minute); used.add(ev.minute); events.push(ev); });
 
   if (gameNo === 3) {
     const deciderTeam = seriesMods && seriesMods.userDecider >= seriesMods.oppDecider ? 'user' : 'opp';
@@ -1229,12 +1354,21 @@ function pickScoringMinutes(count) {
   return candidates.slice(0, count).sort((a, b) => a - b);
 }
 
-function findFreeMinute(used) {
+function findFreeMinute(used, preferred = null) {
+  if (preferred != null) {
+    let p = Math.max(2, Math.min(90, Math.round(preferred)));
+    for (let offset = 0; offset < 6; offset++) {
+      const a = p + offset;
+      const b = p - offset;
+      if (a <= 90 && !used.has(a)) return a;
+      if (b >= 2 && !used.has(b)) return b;
+    }
+  }
   for (let i = 0; i < 40; i++) {
     const m = randMinute();
     if (!used.has(m)) return m;
   }
-  for (let m = 2; m <= 79; m++) if (!used.has(m)) return m;
+  for (let m = 2; m <= 89; m++) if (!used.has(m)) return m;
   return randMinute();
 }
 
@@ -1405,46 +1539,173 @@ function chemistry(names) {
   return { bonus, text: found.length ? found.join('; ') : '' };
 }
 
-function exportTeam() {
+
+async function exportTeam() {
   if (!rosterFull()) return;
-  const payload = {
-    version: 1,
-    game: 'WinTheOrigin',
-    state: selectedState,
-    stateName: DATA[selectedState].name,
-    createdAt: new Date().toISOString(),
-    roster: roster.map(s => ({ key: s.key, label: s.label, player: s.player }))
-  };
-  teamCode.value = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
-  challengeStatus.textContent = 'Team exported. Copy this code and send it to someone to challenge your Origin side.';
+  const payload = makeChallengePayload(selectedState, roster);
+  const token = await encodeChallengeToken(payload);
+  teamCode.value = token;
+  challengeStatus.textContent = 'Team exported. Copy this challenge token and send it to someone. It is signed so the game can detect broken codes.';
   teamCode.select();
-  navigator.clipboard && navigator.clipboard.writeText(teamCode.value).catch(() => {});
+  navigator.clipboard && navigator.clipboard.writeText(token).catch(() => {});
 }
 
-function importOpponent() {
+async function importOpponent() {
   try {
-    const payload = JSON.parse(decodeURIComponent(escape(atob(teamCode.value.trim()))));
-    if (!payload || payload.game !== 'WinTheOrigin' || !payload.roster || payload.roster.length !== 17) throw new Error('Bad code');
+    const payload = await decodeChallengeToken(teamCode.value.trim());
     if (payload.state === selectedState) {
       challengeStatus.textContent = 'That code is for your own state. Import an opposition state team.';
       return;
     }
-    opponentState = payload.state;
-    challengeOpponent = {
-      state: payload.state,
-      roster: POSITIONS.map(pos => {
-        const found = payload.roster.find(s => s.key === pos.key);
-        return { ...pos, player: found ? found.player : null };
-      })
-    };
-    aiRoster = challengeOpponent.roster.map(s => ({ ...s }));
-    oppRosterTitle.textContent = `${payload.stateName || DATA[opponentState].name} challenge 17`;
-    challengeStatus.textContent = `Imported ${payload.stateName || DATA[opponentState].name}. This team will be your series opponent.`;
-    renderOppRoster();
-    updateProgress();
+    setChallengeOpponent(payload);
+    challengeStatus.textContent = `Imported ${payload.stateName || DATA[opponentState].name}. This team replaces the AI opposition for this series.`;
   } catch (e) {
-    challengeStatus.textContent = 'Could not import that code. Check you pasted the full challenge code.';
+    challengeStatus.textContent = e && e.message ? e.message : 'Could not import that code. Check you pasted the full challenge token.';
   }
+}
+
+async function startFriendChallenge() {
+  if (!friendCode || !friendCode.value.trim()) {
+    friendStatus.textContent = 'Paste a challenge token first.';
+    return;
+  }
+  try {
+    const payload = await decodeChallengeToken(friendCode.value.trim());
+    const userState = payload.state === 'QLD' ? 'NSW' : 'QLD';
+    chooseState(userState);
+    setChallengeOpponent(payload);
+    document.body.classList.add('challenge-mode');
+    friendStatus.textContent = '';
+    challengeStatus.textContent = `Friend challenge loaded: ${payload.stateName || DATA[payload.state].name}. Draft ${DATA[userState].name}, then play their squad instead of the AI.`;
+    teamCode.value = friendCode.value.trim();
+    squadName.textContent = 'Friend challenge loaded';
+    squadNote.textContent = `${payload.stateName || DATA[payload.state].name} are already set. Spin to draft your ${DATA[userState].name} 17.`;
+  } catch (e) {
+    friendStatus.textContent = e && e.message ? e.message : 'Could not read that challenge token.';
+  }
+}
+
+function makeChallengePayload(state, sourceRoster) {
+  return {
+    v: 2,
+    game: 'WinTheOrigin',
+    state,
+    stateName: DATA[state].name,
+    createdAt: new Date().toISOString(),
+    roster: sourceRoster.map(s => ({ key: s.key, id: s.player && s.player.id })).filter(s => s.id)
+  };
+}
+
+function setChallengeOpponent(payload) {
+  if (!payload || payload.game !== 'WinTheOrigin' || !payload.roster || payload.roster.length !== 17) {
+    throw new Error('That token does not contain a complete 17-player Origin side.');
+  }
+  opponentState = payload.state;
+  challengeOpponent = {
+    state: payload.state,
+    roster: POSITIONS.map(pos => {
+      const found = payload.roster.find(s => s.key === pos.key);
+      const player = found ? resolveTokenPlayer(found, payload.state) : null;
+      return { ...pos, player };
+    })
+  };
+  if (!challengeOpponent.roster.every(s => s.player)) {
+    throw new Error('That token is missing one or more players. Export the full 17 again.');
+  }
+  aiRoster = challengeOpponent.roster.map(s => ({ ...s }));
+  aiUsedPlayerIds = new Set(aiRoster.map(s => s.player && s.player.id).filter(Boolean));
+  aiAvailableSquads = [];
+  oppRosterTitle.textContent = `${payload.stateName || DATA[opponentState].name} challenge 17`;
+  renderOppRoster();
+  updateProgress();
+}
+
+function resolveTokenPlayer(entry, state) {
+  if (entry.player) return entry.player; // legacy payload support
+  return findPlayerById(state, entry.id) || findPlayerById(state === 'QLD' ? 'NSW' : 'QLD', entry.id);
+}
+
+function findPlayerById(state, id) {
+  if (!state || !id || !DATA[state]) return null;
+  for (const squad of DATA[state].squads) {
+    const player = squad.players.find(p => p.id === id);
+    if (player) return player;
+  }
+  return null;
+}
+
+async function encodeChallengeToken(payload) {
+  const json = JSON.stringify(payload);
+  const body = base64UrlEncode(json);
+  const sig = (await sha256Hex(body + '.WinTheOrigin.v2')).slice(0, 16);
+  return `WTO2.${body}.${sig}`;
+}
+
+async function decodeChallengeToken(raw) {
+  const token = raw.trim();
+  if (!token) throw new Error('Paste a challenge token first.');
+  if (token.startsWith('WTO2.')) {
+    const parts = token.split('.');
+    if (parts.length !== 3) throw new Error('This challenge token is incomplete.');
+    const expected = (await sha256Hex(parts[1] + '.WinTheOrigin.v2')).slice(0, 16);
+    if (parts[2] !== expected) throw new Error('This challenge token has been changed or pasted incorrectly.');
+    const payload = JSON.parse(base64UrlDecode(parts[1]));
+    validateChallengePayload(payload);
+    return payload;
+  }
+  // Legacy v1 support from earlier prototypes.
+  const legacy = JSON.parse(decodeURIComponent(escape(atob(token))));
+  if (legacy && legacy.version === 1 && legacy.roster && legacy.roster[0] && legacy.roster[0].player) {
+    const payload = {
+      v: 1,
+      game: legacy.game,
+      state: legacy.state,
+      stateName: legacy.stateName,
+      createdAt: legacy.createdAt,
+      roster: legacy.roster.map(s => ({ key: s.key, player: s.player }))
+    };
+    validateChallengePayload(payload);
+    return payload;
+  }
+  throw new Error('This is not a valid Win The Origin challenge token.');
+}
+
+function validateChallengePayload(payload) {
+  if (!payload || payload.game !== 'WinTheOrigin') throw new Error('This is not a Win The Origin token.');
+  if (!['QLD','NSW'].includes(payload.state)) throw new Error('This token does not contain a valid Origin state.');
+  if (!Array.isArray(payload.roster) || payload.roster.length !== 17) throw new Error('This token does not contain a full 17-player squad.');
+  const keys = new Set(payload.roster.map(s => s.key));
+  if (POSITIONS.some(p => !keys.has(p.key))) throw new Error('This token is missing one or more positions.');
+}
+
+function base64UrlEncode(str) {
+  const bytes = new TextEncoder().encode(str);
+  let binary = '';
+  bytes.forEach(b => binary += String.fromCharCode(b));
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+function base64UrlDecode(str) {
+  let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+  while (base64.length % 4) base64 += '=';
+  const binary = atob(base64);
+  const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+
+async function sha256Hex(str) {
+  // Stable browser-safe token signature. This keeps challenge codes portable
+  // between local previews and GitHub Pages.
+  let a = 0x811c9dc5;
+  let b = 0x9e3779b9;
+  for (let i = 0; i < str.length; i++) {
+    const c = str.charCodeAt(i);
+    a ^= c;
+    a = Math.imul(a, 0x01000193) >>> 0;
+    b ^= (c + i);
+    b = Math.imul(b, 0x85ebca6b) >>> 0;
+  }
+  return (a.toString(16).padStart(8, '0') + b.toString(16).padStart(8, '0')).repeat(4).slice(0, 64);
 }
 
 function resetGame() {
@@ -1458,6 +1719,7 @@ function resetGame() {
   series = null;
   isWatching = false;
   challengeOpponent = null;
+  document.body.classList.remove('challenge-mode');
   draftPickNo = 1;
   roster = POSITIONS.map(pos => ({ ...pos, player: null }));
   aiRoster = POSITIONS.map(pos => ({ ...pos, player: null }));
@@ -1469,6 +1731,8 @@ function resetGame() {
   simResult.innerHTML = '';
   teamCode.value = '';
   challengeStatus.textContent = '';
+  if (friendCode) friendCode.value = '';
+  if (friendStatus) friendStatus.textContent = '';
   lastGameStats = null;
   lastGameResult = null;
   lastTimelineEvents = [];

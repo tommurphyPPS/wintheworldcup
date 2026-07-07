@@ -159,22 +159,27 @@ function p(name, positions, rating, note) {
   const primaryPositions = positions.filter(pos => pos !== 'B');
   const expandedPositions = expandPositions(name, positions);
   const positionRatings = buildPositionRatings(name, primaryPositions, expandedPositions, rating);
+
+  // The headline card rating must always represent the player's best listed position rating.
+  // It must never be higher or lower than the best position chip shown on the card.
+  const bestPositionRating = Math.max(...Object.values(positionRatings));
+
   return {
     id: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
     name,
     primaryPositions,
     positions: expandedPositions,
     positionRatings,
-    rating,
+    rating: bestPositionRating,
     note,
     stats: {
-      attack: clamp(Math.round(rating + Math.random() * 4 - 2)),
-      defence: clamp(Math.round(rating + Math.random() * 4 - 2)),
-      speed: clamp(Math.round(rating + Math.random() * 8 - 4)),
-      kicking: clamp(expandedPositions.some(x => ['HB','FE','FB'].includes(x)) ? rating : Math.round(rating - 12)),
-      toughness: clamp(Math.round(rating + Math.random() * 6 - 1)),
-      clutch: clamp(Math.round(rating + Math.random() * 5 - 1)),
-      aura: rating
+      attack: clamp(Math.round(bestPositionRating + Math.random() * 4 - 2)),
+      defence: clamp(Math.round(bestPositionRating + Math.random() * 4 - 2)),
+      speed: clamp(Math.round(bestPositionRating + Math.random() * 8 - 4)),
+      kicking: clamp(expandedPositions.some(x => ['HB','FE','FB'].includes(x)) ? bestPositionRating : Math.round(bestPositionRating - 12)),
+      toughness: clamp(Math.round(bestPositionRating + Math.random() * 6 - 1)),
+      clutch: clamp(Math.round(bestPositionRating + Math.random() * 5 - 1)),
+      aura: bestPositionRating
     }
   };
 }
