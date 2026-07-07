@@ -535,3 +535,10 @@ h2 { margin: 0 0 10px; letter-spacing: -0.03em; }
 .commentator-line.analyst { font-size: 0.94rem; opacity: 0.88; }
 .timeline-event.try .commentator-line.caller,
 .timeline-event.golden .commentator-line.caller { font-size: 1.08rem; }
+
+/* v15 position mastery warnings */
+.tag.primary-pos { background: rgba(101,214,138,.18); border: 1px solid rgba(101,214,138,.45); color: #bfffd1; }
+.tag.secondary-pos { background: rgba(243,193,92,.16); border: 1px solid rgba(243,193,92,.55); color: #ffe2a3; }
+.pos-drop { color: #ffd166; font-size: 12px; font-weight: 950; margin-left: 4px; }
+.slot.legal div:last-child { font-weight: 950; color: var(--ok); }
+.slot.legal div:last-child:has(.pos-drop) { color: #ffd166; }

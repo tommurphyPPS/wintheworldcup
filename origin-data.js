@@ -156,13 +156,15 @@ function squad(id, name, rawPlayers) {
 }
 
 function p(name, positions, rating, note) {
-  const primaryPositions = [...positions];
+  const primaryPositions = positions.filter(pos => pos !== 'B');
   const expandedPositions = expandPositions(name, positions);
+  const positionRatings = buildPositionRatings(name, primaryPositions, expandedPositions, rating);
   return {
     id: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
     name,
     primaryPositions,
     positions: expandedPositions,
+    positionRatings,
     rating,
     note,
     stats: {
@@ -175,6 +177,83 @@ function p(name, positions, rating, note) {
       aura: rating
     }
   };
+}
+
+function buildPositionRatings(name, primaryPositions, expandedPositions, rating) {
+  const special = {
+    'Wally Lewis': { FE: 100, HB: 98, LK: 94 },
+    'Johnathan Thurston': { HB: 100, FE: 98 },
+    'Darren Lockyer': { FB: 99, FE: 99, HB: 93 },
+    'Cameron Smith': { HK: 100, LK: 95 },
+    'Billy Slater': { FB: 99 },
+    'Greg Inglis': { CE: 98, FB: 97, WG: 96, FE: 92 },
+    'Mal Meninga': { CE: 98, WG: 94 },
+    'Steve Renouf': { CE: 95, WG: 92 },
+    'Allan Langer': { HB: 98, FE: 94 },
+    'Andrew Johns': { HB: 99, FE: 96, HK: 91 },
+    'Brad Fittler': { FE: 98, CE: 96, LK: 94 },
+    'Laurie Daley': { FE: 97, CE: 95, LK: 91 },
+    'Jarryd Hayne': { FB: 96, WG: 95, CE: 94 },
+    'Tom Trbojevic': { CE: 97, FB: 96, WG: 95 },
+    'Latrell Mitchell': { CE: 95, FB: 93, WG: 92 },
+    'James Tedesco': { FB: 97, WG: 90 },
+    'Cameron Munster': { FE: 96, FB: 93, CE: 90 },
+    'Kalyn Ponga': { FB: 94, FE: 91 },
+    'Reece Walsh': { FB: 92, FE: 88 },
+    'Nathan Cleary': { HB: 97, FE: 94 },
+    'Mitchell Moses': { HB: 93, FE: 90 },
+    'Cooper Cronk': { HB: 98, FE: 94 },
+    'Brett Kenny': { FE: 96, CE: 94, HB: 92 },
+    'Ricky Stuart': { HB: 96, FE: 92 },
+    'Benny Elias': { HK: 95, LK: 89 },
+    'Danny Buderus': { HK: 97, LK: 90 },
+    'Robbie Farah': { HK: 93, HB: 88 },
+    'Damien Cook': { HK: 92, LK: 86 },
+    'Harry Grant': { HK: 93, LK: 88 },
+    'Ben Hunt': { HB: 92, HK: 91, FE: 89 },
+    'Paul Gallen': { LK: 97, PR: 95 },
+    'Isaah Yeo': { LK: 94, PR: 90 },
+    'Cameron Murray': { LK: 94, ED: 92, CE: 85 },
+    'Jake Trbojevic': { LK: 93, PR: 91 },
+    'Arthur Beetson': { PR: 98, LK: 95 },
+    'Glenn Lazarus': { PR: 98, LK: 92 },
+    'Shane Webcke': { PR: 96, LK: 91 },
+    'Petero Civoniceva': { PR: 96, LK: 91 },
+    'Payne Haas': { PR: 95, LK: 90 },
+    'Gorden Tallis': { ED: 96, LK: 94, PR: 91 },
+    'Trevor Gillmeister': { LK: 94, ED: 93 },
+    'Sam Thaiday': { ED: 93, PR: 91, LK: 90 },
+    'Corey Parker': { LK: 92, ED: 90, PR: 88 }
+  };
+  const ratings = {};
+  const explicit = special[name] || {};
+  expandedPositions.forEach((pos, index) => {
+    if (explicit[pos] != null) {
+      ratings[pos] = explicit[pos];
+      return;
+    }
+    if (primaryPositions.includes(pos)) {
+      const primaryIndex = primaryPositions.indexOf(pos);
+      ratings[pos] = clamp(rating - Math.min(primaryIndex, 2));
+    } else {
+      const closeBack = adjacentDrop(primaryPositions, pos);
+      ratings[pos] = clamp(rating - closeBack - Math.min(index, 3));
+    }
+  });
+  return ratings;
+}
+
+function adjacentDrop(primaryPositions, pos) {
+  const groups = [
+    ['FB','WG','CE'],
+    ['FE','HB'],
+    ['HK','LK'],
+    ['PR','LK','ED']
+  ];
+  const primary = primaryPositions.find(p => p !== 'B');
+  if (!primary) return 7;
+  if (groups.some(group => group.includes(primary) && group.includes(pos))) return 3;
+  return 7;
 }
 
 function expandPositions(name, positions) {

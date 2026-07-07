@@ -190,12 +190,19 @@ function playerCard(player, legalCount, selected = false, picked = false) {
   const card = document.createElement('button');
   card.type = 'button';
   card.className = `player-card choice-button ${selected ? 'selected' : ''} ${picked ? 'ai-picked' : ''}`;
+  const posTags = player.positions.map(pos => {
+    const rating = positionRating(player, pos);
+    const primary = isPrimaryPosition(player, pos);
+    const drop = player.rating - rating;
+    const label = primary ? `${pos} ${rating}` : `${pos} ${rating} (-${drop})`;
+    return `<span class="tag ${primary ? 'primary-pos' : 'secondary-pos'}">${label}</span>`;
+  }).join('');
   card.innerHTML = `
     <div>
       <h3>${player.name}</h3>
       <p class="muted">${player.note}</p>
-      <div class="tags">${player.positions.map(pos => `<span class="tag">${pos}</span>`).join('')}${sig ? `<span class="tag trait">${sig.name}</span>` : ''}</div>
-      <small class="slot-hint">${legalCount !== null ? (legalCount ? `${legalCount} legal open slot${legalCount === 1 ? '' : 's'}` : 'No legal open slots') : 'AI option'}</small>
+      <div class="tags">${posTags}${sig ? `<span class="tag trait">${sig.name}</span>` : ''}</div>
+      <small class="slot-hint">${legalCount !== null ? (legalCount ? `${legalCount} legal open slot${legalCount === 1 ? '' : 's'} — yellow tags show ability drop` : 'No legal open slots') : 'AI option'}</small>
     </div>
     <div class="rating">${player.rating}</div>
   `;
@@ -210,7 +217,7 @@ function selectPlayer(player) {
   }
   selectedPlayer = player;
   moveFromKey = null;
-  squadNote.textContent = `${player.name} selected. Now tap one of the highlighted legal positions in your 17.`;
+  squadNote.textContent = `${player.name} selected. Only legal positions are highlighted. Yellow secondary slots are valid but reduce his rating.`;
   renderChoices();
   renderRoster();
 }
@@ -225,7 +232,7 @@ function placeSelectedPlayer(slotKey) {
   }
   rosterSlot.player = selectedPlayer;
   usedPlayerIds.add(selectedPlayer.id);
-  addDraftLog(`Pick ${draftPickNo}: You took ${selectedPlayer.name} from ${currentSquad.name}.`);
+  addDraftLog(`Pick ${draftPickNo}: You took ${selectedPlayer.name} from ${currentSquad.name} at ${rosterSlot.key} (${candidateSlotLabel(selectedPlayer, rosterSlot)}).`);
   selectedPlayer = null;
   currentSquad = null;
   choices.innerHTML = '<p class="muted">Player drafted. The same draft screen now flips to the opposition pick.</p>';
@@ -283,7 +290,7 @@ function runAiDraftPick() {
       aiRoster.find(s => s.key === aiPick.slot.key).player = aiPick.player;
       aiUsedPlayerIds.add(aiPick.player.id);
       squadNote.textContent = `${DATA[opponentState].name} selected ${aiPick.player.name} at ${aiPick.slot.label}. Reason: ${aiPick.reason}`;
-      addDraftLog(`Pick ${draftPickNo}: ${DATA[opponentState].name} took ${aiPick.player.name} from ${squad.name}.`);
+      addDraftLog(`Pick ${draftPickNo}: ${DATA[opponentState].name} took ${aiPick.player.name} from ${squad.name} at ${aiPick.slot.key} (${candidateSlotLabel(aiPick.player, aiPick.slot)}).`);
       renderOppRoster();
       oppPickingBadge && oppPickingBadge.classList.add('hidden');
       draftPickNo += 1;
@@ -320,6 +327,8 @@ function chooseAiPlayer(options) {
   const chosen = Math.random() < 0.75 ? top[0] : pick(top);
   let reason = criticalNeed(chosen.slot.key, aiRoster) ? `needed a ${chosen.slot.label}` : `highest matchup value at ${chosen.slot.label}`;
   if (SIGNATURES[chosen.player.name]) reason += ` with ${SIGNATURES[chosen.player.name].name}`;
+  const drop = positionDrop(chosen.player, chosen.slot);
+  if (drop > 0) reason += ` despite a -${drop} secondary-position drop`;
   return { ...chosen, reason };
 }
 
@@ -368,6 +377,47 @@ function canPlay(player, slot) {
   return false;
 }
 
+function positionRating(player, posOrSlot) {
+  if (!player) return 0;
+  const type = typeof posOrSlot === 'string' ? slotType(posOrSlot) : slotType(posOrSlot.key);
+  if (type === 'B') return player.rating;
+  return player.positionRatings && player.positionRatings[type] != null ? player.positionRatings[type] : player.rating;
+}
+
+function isPrimaryPosition(player, posOrSlot) {
+  if (!player) return false;
+  const type = typeof posOrSlot === 'string' ? slotType(posOrSlot) : slotType(posOrSlot.key);
+  if (type === 'B') return true;
+  return positionRating(player, type) >= player.rating;
+}
+
+function positionDrop(player, slot) {
+  if (!player || !slot || slot.key.startsWith('B')) return 0;
+  return Math.max(0, player.rating - positionRating(player, slot));
+}
+
+function slotRatingLabel(player, slot) {
+  const rating = positionRating(player, slot);
+  const drop = positionDrop(player, slot);
+  return drop > 0 ? `${rating} <span class="pos-drop">-${drop}</span>` : `${rating}`;
+}
+
+function candidateSlotLabel(player, slot) {
+  if (!player) return '';
+  const rating = positionRating(player, slot);
+  const drop = positionDrop(player, slot);
+  return drop > 0 ? `${rating} ⚠ -${drop}` : `${rating}`;
+}
+
+function swapCandidateLabel(fromKey, targetSlot) {
+  const from = roster.find(s => s.key === fromKey);
+  return from && from.player ? candidateSlotLabel(from.player, targetSlot) : '+';
+}
+
+function legalSlotSummary(player, targetRoster) {
+  return legalSlots(player, targetRoster).map(slot => `${slot.key}: ${candidateSlotLabel(player, slot)}`).join(' • ');
+}
+
 function renderRoster() {
   rosterEl.innerHTML = '';
   roster.forEach(slot => rosterEl.appendChild(slotButton(slot, true)));
@@ -381,7 +431,7 @@ function renderOppRoster() {
     row.innerHTML = `
       <div class="slot-pos">${slot.key}</div>
       <div>${slot.player ? `<strong>${slot.player.name}</strong><br><small>${slot.label}</small>` : `<span class="muted">${slot.label}</span>`}</div>
-      <div>${slot.player ? slot.player.rating : ''}</div>
+      <div>${slot.player ? slotRatingLabel(slot.player, slot) : ''}</div>
     `;
     oppRosterEl.appendChild(row);
   });
@@ -398,7 +448,7 @@ function slotButton(slot) {
   row.innerHTML = `
     <div class="slot-pos">${slot.key}</div>
     <div>${slot.player ? `<strong>${slot.player.name}</strong><br><small>${slot.label}</small>` : `<span class="muted">${slot.label}</span>`}</div>
-    <div>${slot.player ? slot.player.rating : legalForSelected || legalMoveTarget ? '+' : ''}</div>
+    <div>${slot.player ? slotRatingLabel(slot.player, slot) : legalForSelected ? candidateSlotLabel(selectedPlayer, slot) : legalMoveTarget ? swapCandidateLabel(moveFromKey, slot) : ''}</div>
   `;
   row.addEventListener('click', () => handleSlotClick(slot.key));
   return row;
@@ -603,12 +653,11 @@ function cloneRoster(targetRoster) {
 }
 
 function getTeamRating(targetRoster) {
-  // Team overall is based on the starting 13 only. Bench players can change the matchup after swaps,
-  // but they do not inflate the side's headline overall while sitting on the bench.
-  const players = startingPlayers(targetRoster);
-  if (!players.length) return { total: 0, comboText: '' };
-  const avg = key => players.reduce((sum, p) => sum + effectiveStats(p)[key], 0) / players.length;
-  const names = players.map(p => p.name);
+  // Team overall is based on the starting 13 only, using each player's rating in the slot he is actually playing.
+  const slots = startingSlots(targetRoster).filter(s => s.player);
+  if (!slots.length) return { total: 0, comboText: '' };
+  const avg = key => slots.reduce((sum, s) => sum + effectiveStats(s.player, slotType(s.key))[key], 0) / slots.length;
+  const names = slots.map(s => s.player.name);
   const combo = chemistry(names);
   const total = Math.round((avg('attack') + avg('defence') + avg('speed') * 0.6 + avg('kicking') * 0.7 + avg('toughness') + avg('clutch') + avg('aura')) / 6.3 + combo.bonus);
   return { total, comboText: combo.text, combo };
@@ -633,7 +682,7 @@ function calculateMatchupReport(userRoster, oppRoster) {
 }
 
 function weightedPlayerScore(player, type) {
-  const stats = effectiveStats(player);
+  const stats = effectiveStats(player, type);
   const weights = POSITION_WEIGHTS[type] || POSITION_WEIGHTS.B;
   let totalWeight = 0;
   let total = 0;
@@ -641,8 +690,10 @@ function weightedPlayerScore(player, type) {
   return total / totalWeight;
 }
 
-function effectiveStats(player) {
+function effectiveStats(player, positionType = null) {
+  const ratingDelta = positionType ? positionRating(player, positionType) - player.rating : 0;
   const stats = { ...player.stats };
+  if (ratingDelta) Object.keys(stats).forEach(key => stats[key] = clamp(stats[key] + ratingDelta));
   const sig = SIGNATURES[player.name];
   if (sig) Object.entries(sig.bonus).forEach(([key, value]) => stats[key] = clamp((stats[key] || player.rating) + value));
   return stats;
@@ -686,7 +737,7 @@ function renderMatchupTable(report) {
 }
 
 function topPlayerStats(player, type) {
-  const stats = effectiveStats(player);
+  const stats = effectiveStats(player, type);
   const weights = POSITION_WEIGHTS[type] || POSITION_WEIGHTS.B;
   return Object.keys(weights)
     .filter(k => weights[k] > 0)
@@ -806,8 +857,8 @@ function weatherModifier(weather, userRoster, oppRoster) {
 }
 
 function teamAvg(targetRoster, key) {
-  const players = startingPlayers(targetRoster);
-  return players.reduce((sum, p) => sum + effectiveStats(p)[key], 0) / Math.max(1, players.length);
+  const slots = startingSlots(targetRoster).filter(s => s.player);
+  return slots.reduce((sum, s) => sum + effectiveStats(s.player, slotType(s.key))[key], 0) / Math.max(1, slots.length);
 }
 
 function renderGameShell(gameNo, weather, ref, goldenPoint, matchup, seriesMods) {
