@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Win The Origin</title>
+  <link rel="stylesheet" href="origin.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="hero compact-hero">
+      <div>
+        <p class="eyebrow">State v State • Era v Era</p>
+        <h1>Win The Origin</h1>
+        <p class="subtitle">Choose your state, draft legends and current stars, then play a matchup-driven best-of-three Origin series.</p>
+      </div>
+      <button id="resetBtn" class="ghost hidden">Reset</button>
+    </header>
+
+    <main>
+      <section id="stateScreen" class="card state-screen">
+        <h2>Choose your state</h2>
+        <p>Once you choose Queensland or NSW, your draft is locked to that state. The opposition drafts from the other state only.</p>
+        <div class="state-buttons">
+          <button class="state-btn qld" data-state="QLD">Queensland Maroons</button>
+          <button class="state-btn nsw" data-state="NSW">NSW Blues</button>
+        </div>
+      </section>
+
+      <section id="draftScreen" class="hidden draft-layout">
+        <section class="card status-card">
+          <div>
+            <p class="eyebrow">Live Origin draft</p>
+            <h2 id="stateTitle">Queensland</h2>
+          </div>
+          <div class="meter">
+            <span id="pickCount">0/17</span>
+            <div class="bar"><div id="pickBar"></div></div>
+          </div>
+        </section>
+
+        <section class="draft-table single-draft-table">
+          <div id="draftArena" class="draft-pane user-pane active-user-turn">
+            <div class="pane-header">
+              <div>
+                <p class="eyebrow" id="turnLabel">Your turn</p>
+                <h2 id="squadName">Spin to reveal</h2>
+              </div>
+              <div class="arena-actions">
+                <div id="oppPickingBadge" class="pick-badge hidden">Opposition picking their player</div>
+                <button id="spinBtn">Spin once</button>
+              </div>
+            </div>
+            <p id="squadNote" class="muted">Spin once. You must pick from that squad; there is no respin.</p>
+            <div id="choices" class="choices arena-choices"></div>
+          </div>
+        </section>
+
+        <div class="hidden" aria-hidden="true">
+          <h2 id="aiTitle">Waiting</h2>
+          <p id="aiNote"></p>
+          <div id="aiChoices"></div>
+        </div>
+
+        <section class="team-board-grid">
+          <section class="card team-card user-team-card">
+            <h2>Your 17</h2>
+            <div id="roster" class="roster"></div>
+          </section>
+          <section class="card team-card opp-team-card">
+            <h2 id="oppRosterTitle">Opposition 17</h2>
+            <div id="oppRoster" class="roster compact-roster"></div>
+          </section>
+        </section>
+
+        <section class="card export-card compact-tools">
+          <div>
+            <h2>Challenge mode</h2>
+            <p class="muted">Export your drafted 17 as a challenge code, or paste an opposition code.</p>
+          </div>
+          <div class="button-row">
+            <button id="exportBtn" class="ghost" disabled>Export my team</button>
+            <button id="importBtn" class="ghost">Import opposition</button>
+          </div>
+          <textarea id="teamCode" placeholder="Team code appears here, or paste an opposition code here"></textarea>
+          <p id="challengeStatus" class="muted"></p>
+        </section>
+
+        <section class="card sim-card">
+          <h2>Origin Series</h2>
+          <p class="muted">Before each match, compare the sides, highlight strengths and weaknesses, then swap your bench to fix weak points.</p>
+          <button id="simulateBtn" class="primary" disabled>Draft both 17s first</button>
+          <div id="simResult" class="sim-result"></div>
+        </section>
+
+        <div id="draftLog" class="draft-log hidden"></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="origin-data.js"></script>
+  <script src="origin-app.js"></script>
+</body>
+</html>
