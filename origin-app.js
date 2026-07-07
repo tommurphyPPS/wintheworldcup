@@ -945,6 +945,7 @@ function playNextGame() {
 
   lastGameStats = generateMatchStats(regulationUserScore, regulationOppScore, userScore, oppScore, matchup, weather, ref, opp, goldenPoint, venue, home);
   lastGameStats.seriesMods = seriesMods;
+  lastGameStats.benchPlan = benchPlan;
   if (coachEvents.length) { rareTraits.events.push(...coachEvents); seriesMods.notes.push(...coachEvents.map(e => e.text)); }
   const events = generateGameEvents(gameNo, regulationUserScore, regulationOppScore, matchup, weather, ref, opp, goldenPoint, seriesMods, rareTraits, benchPlan);
   lastTimelineEvents = events;
@@ -1238,32 +1239,67 @@ function renderScorerSummary(events) {
 }
 
 
-function addSeriesPoints(name, team, points, tryInc = 0) {
+function addSeriesPoints(name, team, points, tryInc = 0, statPatch = {}) {
   if (!name || !series) return;
   if (!series.playerPoints) series.playerPoints = {};
-  if (!series.playerPoints[name]) series.playerPoints[name] = { name, team, points: 0, tries: 0, gamesInfluenced: 0 };
-  series.playerPoints[name].points += points;
-  series.playerPoints[name].tries += tryInc;
-  series.playerPoints[name].gamesInfluenced += 1;
+  if (!series.playerPoints[name]) {
+    series.playerPoints[name] = {
+      name, team, points: 0, tries: 0, potm: 0, gamesInfluenced: 0,
+      runMetres: 0, tackles: 0, tackleBusts: 0, lineBreaks: 0, tryAssists: 0, fieldGoals: 0, goals: 0, errors: 0, impactPlays: 0
+    };
+  }
+  const rec = series.playerPoints[name];
+  rec.points += points;
+  rec.tries += tryInc;
+  rec.gamesInfluenced += 1;
+  Object.entries(statPatch).forEach(([key, value]) => {
+    rec[key] = (rec[key] || 0) + value;
+  });
 }
 
 function awardSeriesPoints(events, userWon) {
   const gameScores = {};
   events.forEach(ev => {
     if (!ev.playerName) return;
-    const pts = (ev.isTry ? 8 : 0) + (ev.kind === 'golden' ? 12 : 0) + (ev.kind === 'score' ? 4 : 0) + (ev.kind === 'matchup' ? 3 : 0) + (ev.kind === 'trait' ? 3 : 0);
+    const pts = (ev.isTry ? 8 : 0) + (ev.kind === 'golden' ? 12 : 0) + (ev.kind === 'score' ? 4 : 0) + (ev.kind === 'matchup' ? 3 : 0) + (ev.kind === 'trait' ? 3 : 0) + (ev.kind === 'bench' ? 1 : 0);
     const team = ev.team === 'user' ? selectedState : opponentState;
     gameScores[ev.playerName] = (gameScores[ev.playerName] || 0) + pts;
-    addSeriesPoints(ev.playerName, team, pts, ev.isTry ? 1 : 0);
+    const patch = {};
+    if (ev.isTry) {
+      patch.runMetres = randBetween(55, 125);
+      patch.tackleBusts = randBetween(1, 5);
+      patch.lineBreaks = 1;
+      patch.impactPlays = 1;
+    } else if (ev.kind === 'golden') {
+      patch.fieldGoals = 1;
+      patch.impactPlays = 1;
+    } else if (ev.kind === 'score') {
+      patch.goals = ev.points === 2 ? 1 : 0;
+      patch.impactPlays = 1;
+    } else if (ev.kind === 'matchup') {
+      patch.runMetres = randBetween(28, 80);
+      patch.tackleBusts = randBetween(1, 3);
+      patch.lineBreaks = Math.random() < 0.45 ? 1 : 0;
+      patch.impactPlays = 1;
+    } else if (ev.kind === 'trait') {
+      patch.runMetres = randBetween(18, 65);
+      patch.tackleBusts = Math.random() < 0.5 ? 1 : 0;
+      patch.tryAssists = ev.text && ev.text.toLowerCase().includes('tempo') ? 1 : 0;
+      patch.impactPlays = 1;
+    } else if (ev.kind === 'bench') {
+      patch.runMetres = randBetween(20, 70);
+      patch.tackles = randBetween(5, 18);
+    }
+    addSeriesPoints(ev.playerName, team, pts, ev.isTry ? 1 : 0, patch);
   });
   const winners = startingPlayers(userWon ? roster : getActiveOpponentRoster());
-  winners.forEach(p => addSeriesPoints(p.name, userWon ? selectedState : opponentState, 1, 0));
+  winners.forEach(p => addSeriesPoints(p.name, userWon ? selectedState : opponentState, 1, 0, { tackles: randBetween(12, 35), runMetres: randBetween(40, 105) }));
   const top = Object.entries(gameScores).sort((a,b)=>b[1]-a[1])[0];
   if (top) {
     const record = series.playerPoints[top[0]];
     record.potm = (record.potm || 0) + 1;
     record.points += 6;
-    return { name: top[0], points: Math.round(record.points), team: record.team };
+    return { name: top[0], team: record.team, tries: record.tries, lineBreaks: record.lineBreaks, runMetres: record.runMetres };
   }
   return null;
 }
@@ -1273,7 +1309,17 @@ function renderPlayerOfSeries() {
   const top = Object.values(series.playerPoints).sort((a,b)=>b.points-a.points)[0];
   if (!top) return '';
   const teamName = DATA[top.team] ? DATA[top.team].name : top.team;
-  return `<div class="player-of-series"><h3>Player of the Series</h3><p><strong>${top.name}</strong> — ${teamName}</p><p>${Math.round(top.points)} influence points • ${top.tries} tries • ${top.potm || 0} player-of-match awards</p></div>`;
+  const statBits = [
+    `${top.tries || 0} tries`,
+    `${top.potm || 0} player-of-match awards`,
+    `${Math.round(top.runMetres || 0)} run metres`,
+    `${top.lineBreaks || 0} line breaks`,
+    `${top.tackleBusts || 0} tackle busts`,
+    `${top.tackles || 0} tackles`,
+    top.fieldGoals ? `${top.fieldGoals} field goal${top.fieldGoals === 1 ? '' : 's'}` : null,
+    top.tryAssists ? `${top.tryAssists} try assist${top.tryAssists === 1 ? '' : 's'}` : null
+  ].filter(Boolean).join(' • ');
+  return `<div class="player-of-series"><h3>Player of the Series</h3><p><strong>${top.name}</strong> — ${teamName}</p><p>${statBits}</p></div>`;
 }
 
 function renderSeriesFinal() {
@@ -1337,12 +1383,14 @@ function selectRareTraitEvents(targetRoster, team, gameNo, seriesMods) {
 function planBenchRotations(userRoster, oppRoster) {
   const userEvents = createBenchEvents(userRoster, 'user');
   const oppEvents = createBenchEvents(oppRoster, 'opp');
-  const userEdge = benchImpact(userRoster) * 0.06;
-  const oppEdge = benchImpact(oppRoster) * 0.06;
+  const userBench = benchImpact(userRoster);
+  const oppBench = benchImpact(oppRoster);
+  const userEdge = userBench * 0.12;
+  const oppEdge = oppBench * 0.12;
   const notes = [];
-  if (userEvents.length) notes.push(`${DATA[selectedState].name} bench impact: ${userEvents.map(e => e.playerName).join(', ')}`);
-  if (oppEvents.length) notes.push(`${DATA[opponentState].name} bench impact: ${oppEvents.map(e => e.playerName).join(', ')}`);
-  return { userEdge, oppEdge, events: [...userEvents, ...oppEvents], notes };
+  if (userEvents.length) notes.push(`${DATA[selectedState].name} bench rotation: ${userEvents.map(e => e.playerName).join(', ')} (${formatBenchLabel(userBench)})`);
+  if (oppEvents.length) notes.push(`${DATA[opponentState].name} bench rotation: ${oppEvents.map(e => e.playerName).join(', ')} (${formatBenchLabel(oppBench)})`);
+  return { userEdge, oppEdge, userBench, oppBench, events: [...userEvents, ...oppEvents], notes };
 }
 
 function createBenchEvents(targetRoster, team) {
@@ -1360,13 +1408,21 @@ function createBenchEvents(targetRoster, team) {
       kind: spark ? 'trait' : 'bench',
       userPoints: 0,
       oppPoints: 0,
-      momentum: team === 'user' ? (spark ? 8 : 3) : (spark ? -8 : -3),
+      momentum: team === 'user' ? (spark ? 8 : clampStat(Math.round((impact - 84) / 3), -4, 6)) : (spark ? -8 : -clampStat(Math.round((impact - 84) / 3), -4, 6)),
       playerName: player.name,
       text: spark
         ? `${sideName}: ${player.name} comes off the bench and sparks the ruck. ${sig.name} gives them a short burst of tempo.`
         : `${sideName}: ${player.name} enters from the bench. Fresh legs into the contest (impact ${impact}).`
     };
   });
+}
+
+function formatBenchLabel(value) {
+  if (value > 8) return 'strong bench';
+  if (value > 2) return 'solid bench';
+  if (value < -6) return 'weak bench';
+  if (value < -2) return 'thin bench';
+  return 'balanced bench';
 }
 
 function bestBenchType(player) {
@@ -1545,6 +1601,7 @@ function renderMatchStats(stats) {
         <span>Errors</span><b>${stats.userErrors}</b><b>${stats.oppErrors}</b>
         <span>Penalties conceded</span><b>${stats.userPenalties}</b><b>${stats.oppPenalties}</b>
         <span>Run metres</span><b>${stats.userMetres}</b><b>${stats.oppMetres}</b>
+        <span>Bench rotation</span><b>${stats.benchPlan ? formatBenchLabel(stats.benchPlan.userBench) : '—'}</b><b>${stats.benchPlan ? formatBenchLabel(stats.benchPlan.oppBench) : '—'}</b>
       </div>
       <p class="why-win"><strong>Why:</strong> ${stats.reason}</p>
       <p class="why-win"><strong>Venue:</strong> ${stats.home ? stats.home.label : 'Neutral venue.'}</p>
