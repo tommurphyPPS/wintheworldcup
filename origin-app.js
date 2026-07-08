@@ -435,19 +435,40 @@ function runAiDraftPick() {
 
 function chooseAiPlayer(options) {
   const names = aiRoster.map(s => s.player && s.player.name).filter(Boolean);
+  const openStarting = aiRoster.filter(s => !s.key.startsWith('B') && !s.player);
+  const openBench = aiRoster.filter(s => s.key.startsWith('B') && !s.player);
   const scored = [];
   options.forEach(player => {
     const slots = legalSlots(player, aiRoster);
     if (!slots.length) return;
+    const bestPlayableScore = Math.max(...slots.map(slot => weightedPlayerScore(player, slotType(slot.key))));
     slots.forEach(slot => {
       const type = slotType(slot.key);
       let score = weightedPlayerScore(player, type);
-      if (SIGNATURES[player.name]) score += SIGNATURES[player.name].tier === 'legendary' ? 3 : 1.5;
+      const starPower = bestPlayableScore - 88;
+
+      // Traits and chemistry make elite or historically useful Origin players worth stockpiling.
+      if (SIGNATURES[player.name]) score += SIGNATURES[player.name].tier === 'legendary' ? 3.5 : 1.8;
       CHEMISTRY_COMBOS.forEach(c => {
         if (c.names.includes(player.name) && c.names.some(n => names.includes(n))) score += c.bonus;
       });
+
+      // Fill vital open starting positions, but do not ignore a superstar who is slightly out of role.
       if (criticalNeed(slot.key, aiRoster)) score += 8;
-      if (slot.key.startsWith('B')) score -= 6;
+      if (!slot.key.startsWith('B') && openStarting.length <= 5) score += 2;
+
+      // Bench is no longer a dumping ground: if the player is clearly better than what is on the field,
+      // draft him and let the final shuffle push him into the starting 13 later.
+      if (slot.key.startsWith('B')) {
+        const benchPenalty = starPower >= 8 ? 0.5 : 3.5;
+        score -= benchPenalty;
+        if (canUpgradeStarter(player, aiRoster)) score += 5;
+        if (openStarting.length === 0 && openBench.length) score += 2;
+      }
+
+      // A secondary-position superstar can still be better than an average primary-position fit.
+      const drop = positionDrop(player, slot);
+      if (drop > 0 && weightedPlayerScore(player, type) >= 93) score += 1.5;
       scored.push({ player, slot, score });
     });
   });
@@ -457,12 +478,20 @@ function chooseAiPlayer(options) {
   }
   scored.sort((a, b) => b.score - a.score);
   const top = scored.slice(0, Math.min(4, scored.length));
-  const chosen = Math.random() < 0.75 ? top[0] : pick(top);
-  let reason = criticalNeed(chosen.slot.key, aiRoster) ? `needed a ${chosen.slot.label}` : `highest matchup value at ${chosen.slot.label}`;
+  const chosen = Math.random() < 0.82 ? top[0] : pick(top);
+  let reason = criticalNeed(chosen.slot.key, aiRoster) ? `needed a ${chosen.slot.label}` : `best squad value at ${chosen.slot.label}`;
+  if (chosen.slot.key.startsWith('B')) reason = 'stockpiled an elite player for the bench shuffle';
   if (SIGNATURES[chosen.player.name]) reason += ` with ${SIGNATURES[chosen.player.name].name}`;
   const drop = positionDrop(chosen.player, chosen.slot);
-  if (drop > 0) reason += ` despite a -${drop} secondary-position drop`;
+  if (drop > 0) reason += ` despite a -${drop} secondary-position drop because the effective rating was still higher`;
   return { ...chosen, reason };
+}
+
+function canUpgradeStarter(player, targetRoster) {
+  return targetRoster.some(slot => {
+    if (slot.key.startsWith('B') || !slot.player || !canPlay(player, slot)) return false;
+    return weightedPlayerScore(player, slotType(slot.key)) > weightedPlayerScore(slot.player, slotType(slot.key)) + 2.5;
+  });
 }
 
 function turnBackToUser() {
@@ -655,12 +684,13 @@ function criticalNeed(key, targetRoster) {
 
 function optimiseOpponentLineup() {
   if (challengeOpponent) return;
-  // Opposition coach gets the same right to use the bench to repair weaknesses before each game.
-  // It greedily searches legal bench swaps and keeps the swap that improves the opposition's
-  // starting-13 rating plus head-to-head edge the most.
+  // Final coach shuffle: the opposition now treats all 17 players as a squad.
+  // It repeatedly promotes bench stars if their effective out-of-position rating beats a starter,
+  // then optimises matchup edge against your selected 13.
   let improved = true;
   let attempts = 0;
-  while (improved && attempts < 8) {
+  const shuffleNotes = [];
+  while (improved && attempts < 16) {
     improved = false;
     attempts += 1;
     let best = null;
@@ -674,16 +704,27 @@ function optimiseOpponentLineup() {
         const tmp = trial[si].player;
         trial[si].player = trial[bi].player;
         trial[bi].player = tmp;
-        const score = opponentOptimiseScore(trial);
-        if (score > base + 0.8 && (!best || score > best.score)) best = { bi, si, score };
+        let score = opponentOptimiseScore(trial);
+        const oldStarterScore = weightedPlayerScore(startSlot.player, slotType(startSlot.key));
+        const newStarterScore = weightedPlayerScore(benchSlot.player, slotType(startSlot.key));
+        const upgrade = newStarterScore - oldStarterScore;
+        if (upgrade > 0) score += upgrade * 0.8;
+        if (score > base + 0.45 && (!best || score > best.score)) best = { bi, si, score, upgrade };
       });
     });
     if (best) {
-      const tmp = aiRoster[best.si].player;
-      aiRoster[best.si].player = aiRoster[best.bi].player;
-      aiRoster[best.bi].player = tmp;
+      const start = aiRoster[best.si];
+      const bench = aiRoster[best.bi];
+      shuffleNotes.push(`${bench.player.name} promoted to ${start.key}${best.upgrade > 0 ? ` (+${best.upgrade.toFixed(1)} effective)` : ''}`);
+      const tmp = start.player;
+      start.player = bench.player;
+      bench.player = tmp;
       improved = true;
     }
+  }
+  if (shuffleNotes.length) {
+    addDraftLog(`Opposition final shuffle: ${shuffleNotes.slice(0, 3).join('; ')}${shuffleNotes.length > 3 ? '...' : ''}`);
+    squadNote.textContent = `${DATA[opponentState].name} completed a final shuffle to get its highest-value players into the starting 13.`;
   }
   renderOppRoster();
 }
