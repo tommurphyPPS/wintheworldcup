@@ -781,6 +781,7 @@ function showSeriesSetup(resetSeries = true) {
       </div>
       ${renderTraitSummary(roster, opp)}
       ${renderMatchupTable(matchup)}
+      ${renderFullPregameTeamTable(roster, opp)}
       <div class="bench-tip"><strong>Bench fix tip:</strong> green rows favour you, red rows favour the opposition. Click a player in your 17, then click a legal bench or position slot to swap and update the comparison.</div>
     </div>
   `;
@@ -911,6 +912,35 @@ function renderMatchupTable(report) {
     </div>`;
   }).join('');
   return `<h4>Aligned head-to-head matchups</h4><div class="h2h-table">${rows}</div>`;
+}
+
+
+function renderFullPregameTeamTable(userRoster, oppRoster) {
+  const rows = POSITIONS.map(pos => {
+    const us = userRoster.find(s => s.key === pos.key);
+    const os = oppRoster.find(s => s.key === pos.key);
+    const up = us && us.player;
+    const op = os && os.player;
+    const isBench = pos.key.startsWith('B');
+    const uType = isBench ? null : slotType(pos.key);
+    const oType = isBench ? null : slotType(pos.key);
+    const uRating = up ? (uType ? Math.round(weightedPlayerScore(up, uType)) : up.rating) : 0;
+    const oRating = op ? (oType ? Math.round(weightedPlayerScore(op, oType)) : op.rating) : 0;
+    const diff = isBench ? 0 : Math.round(uRating - oRating);
+    const cls = isBench ? 'bench-row' : (diff > 2 ? 'good' : diff < -2 ? 'bad' : 'even');
+    const adv = isBench ? 'Bench depth' : (diff > 2 ? `${DATA[selectedState].name} +${diff}` : diff < -2 ? `${DATA[opponentState].name} +${Math.abs(diff)}` : 'Even');
+    const uDrop = up && uType ? positionDropLabel(up, uType) : '';
+    const oDrop = op && oType ? positionDropLabel(op, oType) : '';
+    return `<tr class="${cls}"><td>${pos.label}</td><td><strong>${up ? up.name : '—'}</strong><small>${up ? `${uRating}${uDrop}` : ''}</small></td><td>${adv}</td><td><strong>${op ? op.name : '—'}</strong><small>${op ? `${oRating}${oDrop}` : ''}</small></td></tr>`;
+  }).join('');
+  return `<div class="full-team-matchups"><h4>Full team sheet and matchup</h4><p class="muted">Starting 13 decide the pre-game overall. Bench players are shown here for planning, but only affect gameplay after they are interchanged onto the field.</p><table><thead><tr><th>Role</th><th>${DATA[selectedState].name}</th><th>Edge</th><th>${DATA[opponentState].name}</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+function positionDropLabel(player, type) {
+  const best = bestPositionRating(player);
+  const current = positionRating(player, type);
+  const drop = Math.round(current - best);
+  return drop < 0 ? ` (${drop})` : '';
 }
 
 function topPlayerStats(player, type) {
@@ -1322,7 +1352,7 @@ function finishGame(userScore, oppScore) {
   const won = userScore > oppScore;
   if (won) series.userWins += 1; else series.oppWins += 1;
   const potm = awardSeriesPoints(lastTimelineEvents, won);
-  series.results.push({ gameNo, userScore, oppScore, won, potm });
+  series.results.push({ gameNo, userScore, oppScore, won, potm, stats: lastGameStats });
   isWatching = false;
   renderPostGameSummary(gameNo, userScore, oppScore, won);
   spinBtn.disabled = rosterFull() || Boolean(currentSquad);
@@ -1435,6 +1465,43 @@ function awardSeriesPoints(events, userWon) {
   return null;
 }
 
+
+function renderMyTeamSeriesStats() {
+  if (!series || !series.results || !series.results.length) return '';
+  const games = series.results.length;
+  const totals = series.results.reduce((acc, r) => {
+    const st = r.stats || {};
+    acc.points += r.userScore || 0;
+    acc.tries += st.userTries || 0;
+    acc.lineBreaks += st.userLineBreaks || 0;
+    acc.tackleBusts += st.userTackleBusts || 0;
+    acc.carries += st.userCarries || 0;
+    acc.tackles += st.userTackles || 0;
+    acc.runMetres += st.userMetres || 0;
+    acc.errors += st.userErrors || 0;
+    acc.penalties += st.userPenalties || 0;
+    acc.possession += st.userPoss || 0;
+    acc.completions += st.userCompletions || 0;
+    return acc;
+  }, { points:0, tries:0, lineBreaks:0, tackleBusts:0, carries:0, tackles:0, runMetres:0, errors:0, penalties:0, possession:0, completions:0 });
+  const rows = [
+    ['Games played', games],
+    ['Minutes played', games * 80],
+    ['Total points', totals.points],
+    ['Tries scored', totals.tries],
+    ['Run metres', totals.runMetres],
+    ['Carries', totals.carries],
+    ['Tackles made', totals.tackles],
+    ['Tackle busts', totals.tackleBusts],
+    ['Line breaks', totals.lineBreaks],
+    ['Errors', totals.errors],
+    ['Penalties conceded', totals.penalties],
+    ['Average possession', `${Math.round(totals.possession / games)}%`],
+    ['Average completion rate', `${Math.round(totals.completions / games)}%`]
+  ].map(([label, value]) => `<tr><td>${label}</td><td>${value}</td></tr>`).join('');
+  return `<div class="my-series-stats"><h3>${DATA[selectedState].name} team series stats</h3><table><tbody>${rows}</tbody></table></div>`;
+}
+
 function renderPlayerOfSeries() {
   if (!series || !series.playerPoints) return '';
   const top = Object.values(series.playerPoints).sort((a,b)=>b.points-a.points)[0];
@@ -1458,7 +1525,7 @@ function renderSeriesFinal() {
   const won = series.userWins > series.oppWins;
   const rows = series.results.map(r => `<li>Game ${r.gameNo}: ${DATA[selectedState].name} ${r.userScore} - ${r.oppScore} ${DATA[opponentState].name}${r.potm ? ` • Player of match: ${r.potm.name}` : ''}</li>`).join('');
   const pots = renderPlayerOfSeries();
-  simResult.innerHTML = `<div class="post-game-page result-card final-series"><h2>${won ? 'Origin series won' : 'Series lost'}</h2><p>${DATA[selectedState].name} ${series.userWins} - ${series.oppWins} ${DATA[opponentState].name}</p><ul class="series-results">${rows}</ul>${pots}<p class="muted">Export your side and challenge another drafted opponent, or generate a new team.</p><div class="button-row"><button class="ghost" onclick="exportTeam()">Export this team</button><button class="primary" onclick="resetGame()">Generate a new team</button></div></div>`;
+  simResult.innerHTML = `<div class="post-game-page result-card final-series"><h2>${won ? 'Origin series won' : 'Series lost'}</h2><p>${DATA[selectedState].name} ${series.userWins} - ${series.oppWins} ${DATA[opponentState].name}</p><ul class="series-results">${rows}</ul>${renderMyTeamSeriesStats()}${pots}<p class="muted">Export your side and challenge another drafted opponent, or generate a new team.</p><div class="button-row"><button class="ghost" onclick="exportTeam()">Export this team</button><button class="primary" onclick="resetGame()">Generate a new team</button></div></div>`;
 }
 
 

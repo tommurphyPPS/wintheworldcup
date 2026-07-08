@@ -598,3 +598,4 @@ h2 { margin: 0 0 10px; letter-spacing: -0.03em; }
   color: inherit;
 }
 .kicker-box option { color: #111; }
+.full-team-matchups,.my-series-stats{margin-top:18px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:14px}.full-team-matchups table,.my-series-stats table{width:100%;border-collapse:collapse}.full-team-matchups th,.full-team-matchups td,.my-series-stats td{padding:9px 10px;border-bottom:1px solid rgba(255,255,255,.1);vertical-align:top}.full-team-matchups small{display:block;opacity:.75;margin-top:3px}.full-team-matchups tr.good td:nth-child(3){color:#6ee7a8}.full-team-matchups tr.bad td:nth-child(3){color:#ff9a9a}.full-team-matchups tr.even td:nth-child(3),.full-team-matchups tr.bench-row td:nth-child(3){color:#ffd36e}.my-series-stats td:last-child{text-align:right;font-weight:800}
