@@ -18,6 +18,8 @@ let challengeOpponent = null;
 let draftPickNo = 1;
 let selectedCoach = null;
 let opponentCoach = null;
+let selectedKickerName = null;
+let opponentKickerName = null;
 
 const stateScreen = document.getElementById('stateScreen');
 const draftScreen = document.getElementById('draftScreen');
@@ -766,6 +768,7 @@ function showSeriesSetup(resetSeries = true) {
         <div><strong>Matchup edge</strong><span>${matchup.edge > 0 ? '+' : ''}${matchup.edge}</span></div>
       </div>
       ${renderCoachSummary()}
+      ${renderKickerSelection()}
       <div class="compare-grid compact-compare">
         <div class="compare-side user-compare">
           <h4>${DATA[selectedState].name} strengths</h4>
@@ -933,9 +936,80 @@ function renderTraitSummary(userRoster, oppRoster) {
   return `<div class="trait-box"><p><strong>Your traits:</strong> ${userTraits.join('; ') || 'None'}</p><p><strong>Opp traits:</strong> ${oppTraits.join('; ') || 'None'}</p><p><strong>Your chemistry:</strong> ${userCombo}</p><p><strong>Opp chemistry:</strong> ${oppCombo}</p></div>`;
 }
 
+
+function kickingRating(player) {
+  if (!player) return 0;
+  const base = player.stats && player.stats.kicking ? player.stats.kicking : player.rating;
+  const clutch = player.stats && player.stats.clutch ? player.stats.clutch : player.rating;
+  const namedBoost = ['Johnathan Thurston','Cameron Smith','Mal Meninga','Michael O’Connor','Rod Wishart','Ryan Girdler','Hazem El Masri','Trent Hodkinson','Nathan Cleary','Valentine Holmes','James Maloney'].includes(player.name) ? 3 : 0;
+  return Math.round(base * 0.75 + clutch * 0.2 + namedBoost);
+}
+
+function kickerTrait(player) {
+  const score = kickingRating(player);
+  if (['Johnathan Thurston','Nathan Cleary','Michael O’Connor','Hazem El Masri','Ryan Girdler','Valentine Holmes','Mal Meninga'].includes(player.name) || score >= 96) return 'Elite Goal Kicker';
+  if (score >= 91) return 'Reliable Goal Kicker';
+  if (score >= 86) return 'Part-time Goal Kicker';
+  return 'Emergency Goal Kicker';
+}
+
+function getKickerOptions(targetRoster) {
+  return targetRoster
+    .filter(s => s.player)
+    .map(s => ({ player: s.player, slot: s.key, score: kickingRating(s.player), trait: kickerTrait(s.player) }))
+    .sort((a,b) => b.score - a.score || b.player.rating - a.player.rating);
+}
+
+function findPlayerByName(targetRoster, name) {
+  return targetRoster.map(s => s.player).filter(Boolean).find(p => p.name === name) || null;
+}
+
+function getSelectedKicker(team) {
+  const targetRoster = team === 'user' ? roster : getActiveOpponentRoster();
+  const name = team === 'user' ? selectedKickerName : opponentKickerName;
+  let player = findPlayerByName(targetRoster, name);
+  if (!player) {
+    const best = getKickerOptions(targetRoster)[0];
+    player = best ? best.player : null;
+    if (team === 'user') selectedKickerName = player ? player.name : null;
+    else opponentKickerName = player ? player.name : null;
+  }
+  return player;
+}
+
+function ensureKickers() {
+  const userBest = getKickerOptions(roster)[0];
+  if (!findPlayerByName(roster, selectedKickerName)) selectedKickerName = userBest ? userBest.player.name : null;
+  const oppRosterActive = getActiveOpponentRoster();
+  const oppBest = getKickerOptions(oppRosterActive)[0];
+  if (!findPlayerByName(oppRosterActive, opponentKickerName)) opponentKickerName = oppBest ? oppBest.player.name : null;
+}
+
+function setUserKicker(name) {
+  selectedKickerName = name;
+  showSeriesSetup(false);
+}
+
+function renderKickerSelection() {
+  ensureKickers();
+  const userOptions = getKickerOptions(roster);
+  const oppOptions = getKickerOptions(getActiveOpponentRoster());
+  const oppKicker = getSelectedKicker('opp');
+  const userSelect = `<select onchange="setUserKicker(this.value)">${userOptions.map(o => `<option value="${escapeAttr(o.player.name)}" ${o.player.name === selectedKickerName ? 'selected' : ''}>${o.player.name} - ${o.score} ${o.trait}</option>`).join('')}</select>`;
+  const selected = getSelectedKicker('user');
+  const selectedLine = selected ? `${selected.name} • ${kickerTrait(selected)} • kicking ${kickingRating(selected)}` : 'No kicker selected';
+  const oppLine = oppKicker ? `${oppKicker.name} • ${kickerTrait(oppKicker)} • kicking ${kickingRating(oppKicker)}` : 'No kicker selected';
+  return `<div class="trait-box kicker-box"><h4>Goal kickers</h4><p><strong>Your kicker:</strong> ${userSelect}</p><p class="muted">${selectedLine}. Tries are worth 4 points. Conversions are separate 2-point kicks credited to this player.</p><p><strong>Opposition kicker:</strong> ${oppLine}</p></div>`;
+}
+
+function escapeAttr(value) {
+  return String(value || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+
 function playNextGame() {
   if (!series || isWatching) return;
   const gameNo = series.game;
+  ensureKickers();
   const opp = getActiveOpponentRoster();
   const matchup = calculateMatchupReport(roster, opp);
   const userRating = getTeamRating(roster).total;
@@ -1138,9 +1212,15 @@ function watchEvents(events, finalUserScore, finalOppScore) {
     userScoreEl.textContent = currentUser;
     oppScoreEl.textContent = currentOpp;
     if (ev.isTry) {
+      const list = ev.team === 'user' ? userScorers : oppScorers;
       const li = document.createElement('li');
-      li.textContent = `${ev.minute}' ${ev.scorer} (${ev.points} pts)`;
-      (ev.team === 'user' ? userScorers : oppScorers).appendChild(li);
+      li.textContent = `${ev.minute}' ${ev.scorer} TRY (4)`;
+      list.appendChild(li);
+      if (ev.converted && ev.kickerName) {
+        const goal = document.createElement('li');
+        goal.textContent = `${ev.minute}' ${ev.kickerName} conversion (2)`;
+        list.appendChild(goal);
+      }
     }
     let text = ev.text;
     if (text === previousText) text = alternateNeutralText(text);
@@ -1181,7 +1261,7 @@ function commentatorLines(ev) {
   if (ev.isTry || ev.kind === 'try') {
     return {
       caller: `TRY ${team.toUpperCase()}! ${raw}`,
-      analyst: `That came from the pressure building through the matchup edge. ${other} have to answer that defensive problem.`
+      analyst: ev.converted ? `${ev.kickerName} adds the conversion. The try scorer gets 4; the kicker gets the extra 2.` : `The try is worth 4, but the conversion is missed. ${other} avoid the full six-point damage.`
     };
   }
   if (ev.kind === 'golden') {
@@ -1279,9 +1359,13 @@ function advanceToNextGame() {
 }
 
 function renderScorerSummary(events) {
-  const mine = events.filter(ev => ev.isTry && ev.team === 'user').map(ev => `<li>${ev.minute}' ${ev.scorer} (${ev.points})</li>`).join('') || '<li>No tries</li>';
-  const theirs = events.filter(ev => ev.isTry && ev.team === 'opp').map(ev => `<li>${ev.minute}' ${ev.scorer} (${ev.points})</li>`).join('') || '<li>No tries</li>';
-  return `<div class="try-summary"><div><h4>${DATA[selectedState].name} tries</h4><ul>${mine}</ul></div><div><h4>${DATA[opponentState].name} tries</h4><ul>${theirs}</ul></div></div>`;
+  const listFor = team => events.filter(ev => ev.isTry && ev.team === team).map(ev => {
+    const conv = ev.converted && ev.kickerName ? `, conversion ${ev.kickerName} (+2)` : ', conversion missed';
+    return `<li>${ev.minute}' ${ev.scorer} try (4)${conv}</li>`;
+  }).join('') || '<li>No tries</li>';
+  const mine = listFor('user');
+  const theirs = listFor('opp');
+  return `<div class="try-summary"><div><h4>${DATA[selectedState].name} scoring</h4><ul>${mine}</ul></div><div><h4>${DATA[opponentState].name} scoring</h4><ul>${theirs}</ul></div></div>`;
 }
 
 
@@ -1337,6 +1421,7 @@ function awardSeriesPoints(events, userWon) {
       patch.tackles = randBetween(5, 18);
     }
     addSeriesPoints(ev.playerName, team, pts, ev.isTry ? 1 : 0, patch);
+    if (ev.converted && ev.kickerName) addSeriesPoints(ev.kickerName, team, 3, 0, { goals: 1, impactPlays: 1 });
   });
   const winners = startingPlayers(userWon ? roster : getActiveOpponentRoster());
   winners.forEach(p => addSeriesPoints(p.name, userWon ? selectedState : opponentState, 1, 0, { tackles: randBetween(12, 35), runMetres: randBetween(40, 105) }));
@@ -1817,36 +1902,51 @@ function normaliseLeagueScore(score) {
 }
 
 function scoringParts(score) {
-  // Rugby league scoring only: tries 4, conversions +2, penalty goals 2, field goals 1.
-  // This returns individual scoring events that add exactly to the final score.
+  // Rugby league scoring only: try = 4, conversion = 2 to the kicker, penalty goal = 2, field goal = 1.
+  // Converted tries are still a 6-point event on the scoreboard, but the try scorer is credited with 4 only.
+  const T = converted => ({ kind: 'try', points: converted ? 6 : 4, converted });
+  const P = { kind: 'penalty', points: 2 };
+  const F = { kind: 'fieldGoal', points: 1 };
   const patterns = {
-    0: [], 1: [1], 2: [2], 4: [4], 6: [6], 8: [6,2], 10: [6,4], 12: [6,6],
-    13: [6,6,1], 14: [6,6,2], 15: [6,6,2,1], 16: [6,6,4], 18: [6,6,6],
-    20: [6,6,6,2], 21: [6,6,6,2,1], 22: [6,6,6,4], 24: [6,6,6,6],
-    25: [6,6,6,6,1], 26: [6,6,6,6,2], 28: [6,6,6,6,4], 30: [6,6,6,6,6],
-    32: [6,6,6,6,6,2], 34: [6,6,6,6,6,4], 36: [6,6,6,6,6,6],
-    38: [6,6,6,6,6,6,2], 40: [6,6,6,6,6,6,4], 42: [6,6,6,6,6,6,6],
-    44: [6,6,6,6,6,6,6,2], 46: [6,6,6,6,6,6,6,4], 48: [6,6,6,6,6,6,6,6],
-    50: [6,6,6,6,6,6,6,6,2]
+    0: [], 1: [F], 2: [P], 4: [T(false)], 6: [T(true)], 8: [T(true),P], 10: [T(true),T(false)], 12: [T(true),T(true)],
+    13: [T(true),T(true),F], 14: [T(true),T(true),P], 15: [T(true),T(true),P,F], 16: [T(true),T(true),T(false)], 18: [T(true),T(true),T(true)],
+    20: [T(true),T(true),T(true),P], 21: [T(true),T(true),T(true),P,F], 22: [T(true),T(true),T(true),T(false)], 24: [T(true),T(true),T(true),T(true)],
+    25: [T(true),T(true),T(true),T(true),F], 26: [T(true),T(true),T(true),T(true),P], 28: [T(true),T(true),T(true),T(true),T(false)], 30: [T(true),T(true),T(true),T(true),T(true)],
+    32: [T(true),T(true),T(true),T(true),T(true),P], 34: [T(true),T(true),T(true),T(true),T(true),T(false)], 36: [T(true),T(true),T(true),T(true),T(true),T(true)],
+    38: [T(true),T(true),T(true),T(true),T(true),T(true),P], 40: [T(true),T(true),T(true),T(true),T(true),T(true),T(false)], 42: [T(true),T(true),T(true),T(true),T(true),T(true),T(true)],
+    44: [T(true),T(true),T(true),T(true),T(true),T(true),T(true),P], 46: [T(true),T(true),T(true),T(true),T(true),T(true),T(true),T(false)], 48: [T(true),T(true),T(true),T(true),T(true),T(true),T(true),T(true)],
+    50: [T(true),T(true),T(true),T(true),T(true),T(true),T(true),T(true),P]
   };
-  return patterns[normaliseLeagueScore(score)] || [6,6,6];
+  return patterns[normaliseLeagueScore(score)] || [T(true),T(true),T(true)];
 }
 
-function makeScoringEvent(team, points, matchup, oppRoster) {
+function makeScoringEvent(team, scoring, matchup, oppRoster) {
   const user = team === 'user';
   const targetRoster = user ? roster : oppRoster;
-  const player = selectEventPlayer(targetRoster, points);
+  const points = typeof scoring === 'number' ? scoring : scoring.points;
+  const scoringKind = typeof scoring === 'number' ? (points >= 4 ? 'try' : points === 1 ? 'fieldGoal' : 'penalty') : scoring.kind;
+  const converted = scoringKind === 'try' && Boolean(scoring.converted);
+  const player = selectEventPlayer(targetRoster, scoringKind === 'try' ? 4 : points);
+  const kicker = (scoringKind === 'try' || scoringKind === 'penalty') ? getSelectedKicker(team) : player;
   const teamName = user ? DATA[selectedState].name : DATA[opponentState].name;
   let text;
-  if (points === 6 || points === 4) {
+  if (scoringKind === 'try') {
     const assist = selectEventPlayer(targetRoster, 1);
-    text = `${teamName}: ${player.name} ${pick(['crashes over','finishes a sweeping edge move','scores off a short ball','pounces on a grubber','beats his opposite number'])}${assist && assist.name !== player.name ? ` after ${assist.name} creates the chance` : ''}${points === 6 ? '. Try converted: 6 points.' : '. Conversion missed: 4 points.'}`;
-  } else if (points === 2) {
-    text = `${teamName}: ${player.name} kicks a penalty goal after sustained pressure: 2 points.`;
+    const convText = converted && kicker ? ` ${kicker.name} converts for the extra 2.` : ' Conversion missed.';
+    text = `${teamName}: ${player.name} ${pick(['crashes over','finishes a sweeping edge move','scores off a short ball','pounces on a grubber','beats his opposite number'])}${assist && assist.name !== player.name ? ` after ${assist.name} creates the chance` : ''}. Try: 4 points.${convText}`;
+  } else if (scoringKind === 'penalty') {
+    text = `${teamName}: ${(kicker || player).name} kicks a penalty goal after sustained pressure: 2 points.`;
   } else {
     text = `${teamName}: ${player.name} snaps a field goal under pressure: 1 point.`;
   }
-  return { minute: randMinute(), team, userPoints: user ? points : 0, oppPoints: user ? 0 : points, text, scorer: player.name, playerName: player.name, isTry: points === 4 || points === 6, points };
+  return {
+    minute: randMinute(), team,
+    userPoints: user ? points : 0, oppPoints: user ? 0 : points,
+    text, scorer: player.name, playerName: player.name,
+    isTry: scoringKind === 'try', points: scoringKind === 'try' ? 4 : points,
+    converted, conversionPoints: converted ? 2 : 0, kickerName: kicker ? kicker.name : null,
+    scoringKind, kickerTrait: kicker ? kickerTrait(kicker) : null
+  };
 }
 
 function selectEventPlayer(targetRoster, points) {
@@ -2094,6 +2194,8 @@ function resetGame() {
   challengeOpponent = null;
   selectedCoach = null;
   opponentCoach = null;
+  selectedKickerName = null;
+  opponentKickerName = null;
   document.body.classList.remove('challenge-mode');
   draftPickNo = 1;
   roster = POSITIONS.map(pos => ({ ...pos, player: null }));
