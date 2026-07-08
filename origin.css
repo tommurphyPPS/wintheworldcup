@@ -562,3 +562,28 @@ h2 { margin: 0 0 10px; letter-spacing: -0.03em; }
 .prematch-mode .coach-screen,
 .simulation-mode .coach-screen,
 .summary-mode .coach-screen { display:none !important; }
+
+.interchange-summary {
+  margin-top: 18px;
+  padding: 14px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 14px;
+  background: rgba(255,255,255,.05);
+}
+.interchange-summary table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .9rem;
+}
+.interchange-summary th,
+.interchange-summary td {
+  padding: 8px 6px;
+  border-bottom: 1px solid rgba(255,255,255,.10);
+  text-align: left;
+}
+.interchange-summary th {
+  opacity: .78;
+  font-size: .78rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}

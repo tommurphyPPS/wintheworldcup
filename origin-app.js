@@ -951,14 +951,18 @@ function playNextGame() {
   const coachEvents = planCoachPowerEvents(gameNo);
   const rareTraits = planRareTraitBoosts(gameNo, roster, opp, seriesMods);
   const benchPlan = planBenchRotations(roster, opp);
+  annotateInterchangesWithLiveRatings(benchPlan, roster, opp);
+  const liveSwing = calculateLiveMatchSwing(roster, opp, benchPlan, rareTraits);
   if (homeEdge > 0) seriesMods.notes.push(home.label + ': +1.8 momentum edge');
   if (homeEdge < 0) seriesMods.notes.push(home.label + ': opposition +1.8 momentum edge');
   if (rareTraits.notes.length) seriesMods.notes.push(...rareTraits.notes);
   if (benchPlan.notes.length) seriesMods.notes.push(...benchPlan.notes.slice(0, 2));
+  if (liveSwing.notes.length) seriesMods.notes.push(...liveSwing.notes);
   const ratingEdge = (userRating - oppRating) * 0.42; // six overall points is a real edge, not an automatic win
   const matchupEdge = matchup.edge * 0.55;
   const randomEdge = (Math.random() * 13 - 6.5);
-  const diff = ratingEdge + matchupEdge + weatherModifier(weather, roster, opp) + homeEdge + coachEdge.userEdge - coachEdge.oppEdge + seriesMods.userBoost - seriesMods.oppBoost + rareTraits.userEdge - rareTraits.oppEdge + benchPlan.userEdge - benchPlan.oppEdge + randomEdge;
+  // Bench players and rare player boosts now affect the match only from the minute they are on the field / triggered.
+  const diff = ratingEdge + matchupEdge + weatherModifier(weather, roster, opp) + homeEdge + coachEdge.userEdge - coachEdge.oppEdge + seriesMods.userBoost - seriesMods.oppBoost + liveSwing.edge + randomEdge;
   let [high, low] = pick(SCORE_PROFILES);
   let userScore = diff >= 0 ? high : low;
   let oppScore = diff >= 0 ? low : high;
@@ -987,8 +991,9 @@ function playNextGame() {
   lastGameStats = generateMatchStats(regulationUserScore, regulationOppScore, userScore, oppScore, matchup, weather, ref, opp, goldenPoint, venue, home);
   lastGameStats.seriesMods = seriesMods;
   lastGameStats.benchPlan = benchPlan;
+  lastGameStats.liveSwing = liveSwing;
   if (coachEvents.length) { rareTraits.events.push(...coachEvents); seriesMods.notes.push(...coachEvents.map(e => e.text)); }
-  const events = generateGameEvents(gameNo, regulationUserScore, regulationOppScore, matchup, weather, ref, opp, goldenPoint, seriesMods, rareTraits, benchPlan);
+  const events = generateGameEvents(gameNo, regulationUserScore, regulationOppScore, matchup, weather, ref, opp, goldenPoint, seriesMods, rareTraits, benchPlan, liveSwing);
   lastTimelineEvents = events;
   lastGameResult = { gameNo, userScore, oppScore, weather, ref, goldenPoint, seriesMods };
   renderGameShell(gameNo, weather, ref, goldenPoint, matchup, seriesMods);
@@ -1426,36 +1431,169 @@ function planBenchRotations(userRoster, oppRoster) {
   const oppEvents = createBenchEvents(oppRoster, 'opp');
   const userBench = benchImpact(userRoster);
   const oppBench = benchImpact(oppRoster);
-  const userEdge = userBench * 0.12;
-  const oppEdge = oppBench * 0.12;
+  const activeUserEdge = activeBenchEdge(userEvents);
+  const activeOppEdge = activeBenchEdge(oppEvents);
   const notes = [];
-  if (userEvents.length) notes.push(`${DATA[selectedState].name} bench rotation: ${userEvents.map(e => e.playerName).join(', ')} (${formatBenchLabel(userBench)})`);
-  if (oppEvents.length) notes.push(`${DATA[opponentState].name} bench rotation: ${oppEvents.map(e => e.playerName).join(', ')} (${formatBenchLabel(oppBench)})`);
-  return { userEdge, oppEdge, userBench, oppBench, events: [...userEvents, ...oppEvents], notes };
+  if (userEvents.length) notes.push(`${DATA[selectedState].name} bench rotation: ${userEvents.map(e => `${e.playerName} for ${e.offName}`).join(', ')} (${formatBenchLabel(userBench)})`);
+  if (oppEvents.length) notes.push(`${DATA[opponentState].name} bench rotation: ${oppEvents.map(e => `${e.playerName} for ${e.offName}`).join(', ')} (${formatBenchLabel(oppBench)})`);
+  return { activeUserEdge, activeOppEdge, userBench, oppBench, events: [...userEvents, ...oppEvents], userEvents, oppEvents, notes };
+}
+
+function activeBenchEdge(events) {
+  // Bench players only influence the simulation after they enter. A late interchange gets a smaller effect.
+  return events.reduce((sum, ev) => {
+    const minutesOn = Math.max(0, 80 - ev.minute);
+    return sum + (ev.delta * minutesOn / 80) * 0.18;
+  }, 0);
 }
 
 function createBenchEvents(targetRoster, team) {
   const bench = targetRoster.filter(s => s.key.startsWith('B') && s.player);
+  const starters = targetRoster.filter(s => !s.key.startsWith('B') && s.player).map(s => ({...s}));
   const minutes = [24, 43, 57, 66];
-  return bench.slice(0, 4).map((slot, index) => {
+  const events = [];
+  bench.slice(0, 4).forEach((slot, index) => {
     const player = slot.player;
-    const sig = SIGNATURES[player.name];
     const sideName = team === 'user' ? DATA[selectedState].name : DATA[opponentState].name;
-    const impact = Math.round(weightedPlayerScore(player, bestBenchType(player)));
+    const replacement = chooseReplacementForBench(player, starters);
+    if (!replacement) return;
+    const type = slotType(replacement.key);
+    const onRating = Math.round(weightedPlayerScore(player, type));
+    const offRating = Math.round(weightedPlayerScore(replacement.player, type));
+    const delta = onRating - offRating;
+    // After this minute, the bench player is now the active player in that role for future rotation choices.
+    replacement.player = player;
+    const sig = SIGNATURES[player.name];
     const spark = sig && sig.benchOnly && Math.random() < 0.22;
-    return {
-      minute: minutes[index] + Math.floor(Math.random() * 4) - 1,
+    const minute = minutes[index] + Math.floor(Math.random() * 4) - 1;
+    const deltaLabel = delta >= 0 ? `+${delta}` : `${delta}`;
+    events.push({
+      minute,
       team,
       kind: spark ? 'trait' : 'bench',
       userPoints: 0,
       oppPoints: 0,
-      momentum: team === 'user' ? (spark ? 8 : clampStat(Math.round((impact - 84) / 3), -4, 6)) : (spark ? -8 : -clampStat(Math.round((impact - 84) / 3), -4, 6)),
+      momentum: team === 'user' ? (spark ? 8 : clampStat(Math.round(delta / 2), -5, 6)) : (spark ? -8 : -clampStat(Math.round(delta / 2), -5, 6)),
       playerName: player.name,
-      text: spark
-        ? `${sideName}: ${player.name} comes off the bench and sparks the ruck. ${sig.name} gives them a short burst of tempo.`
-        : `${sideName}: ${player.name} enters from the bench. Fresh legs into the contest (impact ${impact}).`
-    };
+      offName: replacement.player && replacement.player.name === player.name ? 'starter' : '',
+      offPlayerName: null,
+      positionKey: replacement.key,
+      positionType: type,
+      onRating,
+      offRating,
+      delta,
+      text: ''
+    });
+    const ev = events[events.length - 1];
+    // The replacement player was overwritten above; restore display names from captured scores by storing before overwrite.
   });
+  return rebuildBenchEventText(events, targetRoster, team);
+}
+
+function chooseReplacementForBench(player, activeStarters) {
+  let best = null;
+  activeStarters.forEach(s => {
+    if (!canPlay(player, s)) return;
+    const type = slotType(s.key);
+    const onScore = weightedPlayerScore(player, type);
+    const offScore = weightedPlayerScore(s.player, type);
+    const fatigueBonus = ['PR','ED','LK','HK'].includes(type) ? 2.5 : 0.5;
+    const value = (onScore - offScore) + fatigueBonus;
+    if (!best || value > best.value) best = { slot: s, value };
+  });
+  return best ? best.slot : null;
+}
+
+function rebuildBenchEventText(events, originalRoster, team) {
+  // Recreate events with accurate off-player names because the active-starter copy mutates during planning.
+  const sideName = team === 'user' ? DATA[selectedState].name : DATA[opponentState].name;
+  const active = originalRoster.filter(s => !s.key.startsWith('B') && s.player).map(s => ({...s}));
+  return originalRoster.filter(s => s.key.startsWith('B') && s.player).slice(0,4).map((slot, index) => {
+    const player = slot.player;
+    const replacement = chooseReplacementForBench(player, active);
+    if (!replacement) return null;
+    const offPlayer = replacement.player;
+    const type = slotType(replacement.key);
+    const onRating = Math.round(weightedPlayerScore(player, type));
+    const offRating = Math.round(weightedPlayerScore(offPlayer, type));
+    const delta = onRating - offRating;
+    replacement.player = player;
+    const sig = SIGNATURES[player.name];
+    const spark = sig && sig.benchOnly && Math.random() < 0.22;
+    const minute = [24,43,57,66][index] + Math.floor(Math.random() * 4) - 1;
+    const deltaLabel = delta >= 0 ? `+${delta}` : `${delta}`;
+    return {
+      minute,
+      team,
+      kind: spark ? 'trait' : 'bench',
+      userPoints: 0,
+      oppPoints: 0,
+      momentum: team === 'user' ? (spark ? 8 : clampStat(Math.round(delta / 2), -5, 6)) : (spark ? -8 : -clampStat(Math.round(delta / 2), -5, 6)),
+      playerName: player.name,
+      offName: offPlayer.name,
+      offPlayerName: offPlayer.name,
+      positionKey: replacement.key,
+      positionType: type,
+      onRating,
+      offRating,
+      delta,
+      onPlayer: player,
+      offPlayer,
+      text: spark
+        ? `${sideName}: ${player.name} ON for ${offPlayer.name} at ${replacement.key}. ${sig.name} sparks the ruck (${onRating} vs ${offRating}, ${deltaLabel}).`
+        : `${sideName}: ${player.name} ON for ${offPlayer.name} at ${replacement.key}. Interchange impact ${onRating} vs ${offRating} (${deltaLabel}).`
+    };
+  }).filter(Boolean);
+}
+
+
+function annotateInterchangesWithLiveRatings(benchPlan, userRoster, oppRoster) {
+  if (!benchPlan || !benchPlan.events) return;
+  benchPlan.events.sort((a,b)=>a.minute-b.minute).forEach(ev => {
+    const minute = ev.minute || 0;
+    const liveUser = getLiveTeamRating(userRoster, benchPlan.userEvents || [], 'user', minute).total;
+    const liveOpp = getLiveTeamRating(oppRoster, benchPlan.oppEvents || [], 'opp', minute).total;
+    const sideLabel = `${DATA[selectedState].name} ${liveUser} • ${DATA[opponentState].name} ${liveOpp}`;
+    ev.liveUserRating = liveUser;
+    ev.liveOppRating = liveOpp;
+    ev.text += ` Live on-field overall: ${sideLabel}.`;
+  });
+}
+
+function calculateLiveMatchSwing(userRoster, oppRoster, benchPlan, rareTraits) {
+  const startUser = getTeamRating(userRoster).total;
+  const startOpp = getTeamRating(oppRoster).total;
+  const startDiff = startUser - startOpp;
+  const samples = [10, 25, 40, 55, 70, 80];
+  let ratingSwing = 0;
+  samples.forEach(minute => {
+    const liveUser = getLiveTeamRating(userRoster, benchPlan.userEvents || [], 'user', minute).total;
+    const liveOpp = getLiveTeamRating(oppRoster, benchPlan.oppEvents || [], 'opp', minute).total;
+    const liveDiff = liveUser - liveOpp;
+    ratingSwing += ((liveDiff - startDiff) * 0.42) / samples.length;
+  });
+  let traitSwing = 0;
+  (rareTraits && rareTraits.events ? rareTraits.events : []).forEach(ev => {
+    // Rare boosts are temporary. They influence the match after they happen, not before.
+    const minutesActive = Math.max(0, 80 - (ev.minute || 80));
+    const weighted = (ev.edge || 0) * Math.min(1, minutesActive / 28);
+    traitSwing += ev.team === 'user' ? weighted : -weighted;
+  });
+  const edge = ratingSwing + traitSwing;
+  const notes = [`Live on-field engine: starters set the opening rating; interchanges and rare boosts only count after they happen (${edge >= 0 ? '+' : ''}${edge.toFixed(1)} swing).`];
+  return { edge, ratingSwing, traitSwing, notes };
+}
+
+function getLiveTeamRating(targetRoster, teamBenchEvents, team, minute) {
+  const active = startingSlots(targetRoster).filter(s => s.player).map(s => ({ ...s }));
+  (teamBenchEvents || [])
+    .filter(ev => ev.team === team && ev.minute <= minute && ev.onPlayer)
+    .sort((a,b)=>a.minute-b.minute)
+    .forEach(ev => {
+      const slot = active.find(s => s.key === ev.positionKey);
+      if (slot && canPlay(ev.onPlayer, slot)) slot.player = ev.onPlayer;
+    });
+  return getTeamRating(active);
 }
 
 function formatBenchLabel(value) {
@@ -1480,7 +1618,7 @@ function benchImpact(targetRoster) {
 
 function randBetween(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 
-function generateGameEvents(gameNo, userScore, oppScore, matchup, weather, ref, oppRoster, goldenPoint, seriesMods, rareTraits = null, benchPlan = null) {
+function generateGameEvents(gameNo, userScore, oppScore, matchup, weather, ref, oppRoster, goldenPoint, seriesMods, rareTraits = null, benchPlan = null, liveSwing = null) {
   const events = [];
   const used = new Set();
   events.push({ minute: 3, team: 'neutral', kind: 'filler', userPoints: 0, oppPoints: 0, momentum: 0, text: neutralText(weather, ref) });
@@ -1520,7 +1658,11 @@ function generateGameEvents(gameNo, userScore, oppScore, matchup, weather, ref, 
   });
 
   (benchPlan && benchPlan.events ? benchPlan.events : []).forEach(ev => { ev.minute = findFreeMinute(used, ev.minute); used.add(ev.minute); events.push(ev); });
-  (rareTraits && rareTraits.events ? rareTraits.events : []).forEach(ev => { ev.minute = findFreeMinute(used, ev.minute); used.add(ev.minute); events.push(ev); });
+  (rareTraits && rareTraits.events ? rareTraits.events : []).forEach(ev => {
+    ev.minute = findFreeMinute(used, ev.minute);
+    if (liveSwing) ev.text += ` Current-play boost counted from ${ev.minute}' only.`;
+    used.add(ev.minute); events.push(ev);
+  });
 
   if (gameNo === 3) {
     const deciderTeam = seriesMods && seriesMods.userDecider >= seriesMods.oppDecider ? 'user' : 'opp';
@@ -1643,10 +1785,28 @@ function renderMatchStats(stats) {
         <span>Penalties conceded</span><b>${stats.userPenalties}</b><b>${stats.oppPenalties}</b>
         <span>Run metres</span><b>${stats.userMetres}</b><b>${stats.oppMetres}</b>
         <span>Bench rotation</span><b>${stats.benchPlan ? formatBenchLabel(stats.benchPlan.userBench) : '—'}</b><b>${stats.benchPlan ? formatBenchLabel(stats.benchPlan.oppBench) : '—'}</b>
+        <span>Interchange effect</span><b>${stats.benchPlan ? formatSigned(stats.benchPlan.activeUserEdge) : '—'}</b><b>${stats.benchPlan ? formatSigned(stats.benchPlan.activeOppEdge) : '—'}</b>
+        <span>Live on-field swing</span><b>${stats.liveSwing ? formatSigned(stats.liveSwing.edge) : '—'}</b><b>${stats.liveSwing ? formatSigned(-stats.liveSwing.edge) : '—'}</b>
       </div>
+      ${renderInterchangeSummary(stats.benchPlan)}
       <p class="why-win"><strong>Why:</strong> ${stats.reason}</p>
       <p class="why-win"><strong>Venue:</strong> ${stats.home ? stats.home.label : 'Neutral venue.'}</p>
     </div>`;
+}
+
+function formatSigned(value) {
+  if (value === null || value === undefined || Number.isNaN(value)) return '—';
+  return value >= 0 ? `+${value.toFixed(1)}` : value.toFixed(1);
+}
+
+function renderInterchangeSummary(benchPlan) {
+  if (!benchPlan || !benchPlan.events || !benchPlan.events.length) return '';
+  const rows = benchPlan.events.sort((a,b)=>a.minute-b.minute).map(ev => {
+    const side = ev.team === 'user' ? DATA[selectedState].name : DATA[opponentState].name;
+    const delta = ev.delta >= 0 ? `+${ev.delta}` : `${ev.delta}`;
+    return `<tr><td>${ev.minute}'</td><td>${side}</td><td>${ev.playerName} ON</td><td>${ev.offName || ev.offPlayerName || '—'} OFF</td><td>${ev.positionKey}</td><td>${ev.onRating} vs ${ev.offRating} (${delta})</td></tr>`;
+  }).join('');
+  return `<div class="interchange-summary"><h4>Interchange summary</h4><p class="muted">Bench players only affect the match from the minute they enter.</p><table><thead><tr><th>Min</th><th>Team</th><th>On</th><th>Off</th><th>Role</th><th>Effect</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
 function clampStat(value, min, max) { return Math.max(min, Math.min(max, value)); }
