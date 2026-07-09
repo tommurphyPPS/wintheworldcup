@@ -18,6 +18,48 @@ const POSITIONS = [
   { key: 'B4', label: 'Bench' }
 ];
 
+// v31 ratings audit: ratings now use a deliberate Origin-impact scale instead of the older
+// rough squad-list numbers. These are game ratings, not a claim of objective historical ranking.
+// The goal is balance between QLD and NSW while making iconic Origin players feel meaningfully elite.
+const RATING_AUDIT = {
+  // Queensland / Maroons legends and notable Origin performers
+  'Wally Lewis': 100, 'Johnathan Thurston': 100, 'Cameron Smith': 99, 'Darren Lockyer': 99,
+  'Billy Slater': 99, 'Greg Inglis': 98, 'Mal Meninga': 98, 'Allan Langer': 98,
+  'Arthur Beetson': 98, 'Cooper Cronk': 98, 'Gorden Tallis': 97, 'Petero Civoniceva': 97,
+  'Shane Webcke': 96, 'Steve Renouf': 97, 'Gene Miles': 94, 'Bob Lindner': 94,
+  'Trevor Gillmeister': 95, 'Paul Vautin': 92, 'Gary Belcher': 93, 'Dale Shearer': 93,
+  'Kerrod Walters': 92, 'Kevin Walters': 92, 'Sam Backo': 89, 'Martin Bella': 89,
+  'Steve Price': 94, 'Matt Scott': 94, 'Nate Myles': 91, 'Corey Parker': 93,
+  'Sam Thaiday': 93, 'Justin Hodges': 94, 'Brent Tate': 91, 'Darius Boyd': 93,
+  'Israel Folau': 93, 'Karmichael Hunt': 90, 'Matt Bowen': 91, 'Wendell Sailor': 95,
+  'Lote Tuqiri': 95, 'Matt Sing': 93, 'Willie Carne': 89, 'Michael Hancock': 90,
+  'Dane Gagai': 95, 'Cameron Munster': 97, 'Daly Cherry-Evans': 92, 'Kalyn Ponga': 95,
+  'Harry Grant': 95, 'Tino Fa’asuamaleaui': 93, "Tino Fa\'asuamaleaui": 93, 'Reuben Cotter': 92,
+  'Patrick Carrigan': 92, 'Pat Carrigan': 92, 'Josh Papalii': 92, 'Valentine Holmes': 92,
+  'Hamiso Tabuai-Fidow': 93, 'Reece Walsh': 92, 'Ben Hunt': 92, 'Michael Morgan': 91,
+  'Matt Gillett': 92, 'Kurt Capewell': 89, 'Felise Kaufusi': 90, 'Lindsay Collins': 90,
+  'Ben Ikin': 87, 'Adrian Lam': 88, 'Wayne Bartrim': 87, 'Billy Moore': 89,
+  // NSW / Blues legends and notable Origin performers
+  'Andrew Johns': 99, 'Brad Fittler': 98, 'Laurie Daley': 97, 'Peter Sterling': 96,
+  'Ricky Stuart': 96, 'Brett Kenny': 96, 'Glenn Lazarus': 98, 'Ben Elias': 95,
+  'Danny Buderus': 97, 'Paul Gallen': 97, 'Steve Roach': 95, 'Wayne Pearce': 95,
+  'Ray Price': 95, 'Steve Mortimer': 95, 'Paul Sironen': 94, 'Andrew Ettingshausen': 95,
+  'Michael O’Connor': 95, "Michael O\'Connor": 95, 'Mick Cronin': 94, 'Eric Grothe Sr': 94,
+  'Garry Jack': 93, 'Graham Eadie': 92, 'Steve Rogers': 94, 'Noel Cleal': 92,
+  'David Gillespie': 91, 'Paul Harragon': 93, 'Jim Dymock': 92, 'Geoff Toovey': 91,
+  'Anthony Minichiello': 94, 'Mark Gasnier': 95, 'Matt Cooper': 92, 'Ryan Girdler': 93,
+  'Timana Tahu': 91, 'Matt King': 91, 'Craig Fitzgibbon': 92, 'Nathan Hindmarsh': 94,
+  'Ben Kennedy': 95, 'Luke Bailey': 91, 'Craig Wing': 92, 'Jarryd Hayne': 96,
+  'Brett Morris': 95, 'Josh Morris': 94, 'Jamie Lyon': 94, 'Kurt Gidley': 91,
+  'Luke Lewis': 94, 'Boyd Cordner': 93, 'James Tedesco': 97, 'Tom Trbojevic': 97,
+  'Latrell Mitchell': 96, 'Nathan Cleary': 97, 'Mitchell Moses': 94, 'Isaah Yeo': 95,
+  'Payne Haas': 96, 'Cameron Murray': 95, 'Jake Trbojevic': 93, 'Angus Crichton': 92,
+  'Brian To’o': 92, "Brian To\'o": 92, 'Josh Addo-Carr': 94, 'Damien Cook': 93,
+  'Robbie Farah': 94, 'Apisai Koroisau': 92, 'Stephen Crichton': 93, 'Stephen Crichton': 93,
+  'Dylan Edwards': 91, 'Liam Martin': 91, 'Junior Paulo': 90, 'David Klemmer': 90,
+  'Mark Geyer': 91, 'Tony Butterfield': 90, 'Mark Carroll': 91, 'Steve Menzies': 94
+};
+
 // Data note: v2 uses full 17+ player Origin squads/era squads so every spin shows the whole team.
 // The current 2026 squads include extended interchange/reserve players, while historical squads are curated representative Origin-era squads.
 const DATA = {
@@ -151,48 +193,6 @@ const DATA = {
   }
 };
 
-
-// v31 ratings audit: ratings now use a deliberate Origin-impact scale instead of the older
-// rough squad-list numbers. These are game ratings, not a claim of objective historical ranking.
-// The goal is balance between QLD and NSW while making iconic Origin players feel meaningfully elite.
-const RATING_AUDIT = {
-  // Queensland / Maroons legends and notable Origin performers
-  'Wally Lewis': 100, 'Johnathan Thurston': 100, 'Cameron Smith': 99, 'Darren Lockyer': 99,
-  'Billy Slater': 99, 'Greg Inglis': 98, 'Mal Meninga': 98, 'Allan Langer': 98,
-  'Arthur Beetson': 98, 'Cooper Cronk': 98, 'Gorden Tallis': 97, 'Petero Civoniceva': 97,
-  'Shane Webcke': 96, 'Steve Renouf': 97, 'Gene Miles': 94, 'Bob Lindner': 94,
-  'Trevor Gillmeister': 95, 'Paul Vautin': 92, 'Gary Belcher': 93, 'Dale Shearer': 93,
-  'Kerrod Walters': 92, 'Kevin Walters': 92, 'Sam Backo': 89, 'Martin Bella': 89,
-  'Steve Price': 94, 'Matt Scott': 94, 'Nate Myles': 91, 'Corey Parker': 93,
-  'Sam Thaiday': 93, 'Justin Hodges': 94, 'Brent Tate': 91, 'Darius Boyd': 93,
-  'Israel Folau': 93, 'Karmichael Hunt': 90, 'Matt Bowen': 91, 'Wendell Sailor': 95,
-  'Lote Tuqiri': 95, 'Matt Sing': 93, 'Willie Carne': 89, 'Michael Hancock': 90,
-  'Dane Gagai': 95, 'Cameron Munster': 97, 'Daly Cherry-Evans': 92, 'Kalyn Ponga': 95,
-  'Harry Grant': 95, 'Tino Fa’asuamaleaui': 93, "Tino Fa\'asuamaleaui": 93, 'Reuben Cotter': 92,
-  'Patrick Carrigan': 92, 'Pat Carrigan': 92, 'Josh Papalii': 92, 'Valentine Holmes': 92,
-  'Hamiso Tabuai-Fidow': 93, 'Reece Walsh': 92, 'Ben Hunt': 92, 'Michael Morgan': 91,
-  'Matt Gillett': 92, 'Kurt Capewell': 89, 'Felise Kaufusi': 90, 'Lindsay Collins': 90,
-  'Ben Ikin': 87, 'Adrian Lam': 88, 'Wayne Bartrim': 87, 'Billy Moore': 89,
-  // NSW / Blues legends and notable Origin performers
-  'Andrew Johns': 99, 'Brad Fittler': 98, 'Laurie Daley': 97, 'Peter Sterling': 96,
-  'Ricky Stuart': 96, 'Brett Kenny': 96, 'Glenn Lazarus': 98, 'Ben Elias': 95,
-  'Danny Buderus': 97, 'Paul Gallen': 97, 'Steve Roach': 95, 'Wayne Pearce': 95,
-  'Ray Price': 95, 'Steve Mortimer': 95, 'Paul Sironen': 94, 'Andrew Ettingshausen': 95,
-  'Michael O’Connor': 95, "Michael O\'Connor": 95, 'Mick Cronin': 94, 'Eric Grothe Sr': 94,
-  'Garry Jack': 93, 'Graham Eadie': 92, 'Steve Rogers': 94, 'Noel Cleal': 92,
-  'David Gillespie': 91, 'Paul Harragon': 93, 'Jim Dymock': 92, 'Geoff Toovey': 91,
-  'Anthony Minichiello': 94, 'Mark Gasnier': 95, 'Matt Cooper': 92, 'Ryan Girdler': 93,
-  'Timana Tahu': 91, 'Matt King': 91, 'Craig Fitzgibbon': 92, 'Nathan Hindmarsh': 94,
-  'Ben Kennedy': 95, 'Luke Bailey': 91, 'Craig Wing': 92, 'Jarryd Hayne': 96,
-  'Brett Morris': 95, 'Josh Morris': 94, 'Jamie Lyon': 94, 'Kurt Gidley': 91,
-  'Luke Lewis': 94, 'Boyd Cordner': 93, 'James Tedesco': 97, 'Tom Trbojevic': 97,
-  'Latrell Mitchell': 96, 'Nathan Cleary': 97, 'Mitchell Moses': 94, 'Isaah Yeo': 95,
-  'Payne Haas': 96, 'Cameron Murray': 95, 'Jake Trbojevic': 93, 'Angus Crichton': 92,
-  'Brian To’o': 92, "Brian To\'o": 92, 'Josh Addo-Carr': 94, 'Damien Cook': 93,
-  'Robbie Farah': 94, 'Apisai Koroisau': 92, 'Stephen Crichton': 93, 'Stephen Crichton': 93,
-  'Dylan Edwards': 91, 'Liam Martin': 91, 'Junior Paulo': 90, 'David Klemmer': 90,
-  'Mark Geyer': 91, 'Tony Butterfield': 90, 'Mark Carroll': 91, 'Steve Menzies': 94
-};
 
 function squad(id, name, rawPlayers) {
   return { id, name, players: rawPlayers.map(([name, positions, rating, note]) => p(name, positions, rating, note)) };
