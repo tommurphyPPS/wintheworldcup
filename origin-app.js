@@ -458,14 +458,14 @@ function chooseAiPlayer(options) {
     const bestPlayableScore = Math.max(...slots.map(slot => weightedPlayerScore(player, slotType(slot.key))));
     slots.forEach(slot => {
       const type = slotType(slot.key);
-      let score = weightedPlayerScore(player, type);
+      const trialRoster = cloneRoster(aiRoster);
+      const trialSlot = trialRoster.find(s => s.key === slot.key);
+      if (trialSlot) trialSlot.player = player;
+      const chem = chemistryDraftValue(player, names);
+      const power = powerDraftValue(player, slot, trialRoster);
+      const tactical = aiTacticalRosterValue(trialRoster);
+      let score = weightedPlayerScore(player, type) + tactical * 0.18 + chem.value + power.value;
       const starPower = bestPlayableScore - 88;
-
-      // Traits and chemistry make elite or historically useful Origin players worth stockpiling.
-      if (SIGNATURES[player.name]) score += SIGNATURES[player.name].tier === 'legendary' ? 3.5 : 1.8;
-      CHEMISTRY_COMBOS.forEach(c => {
-        if (c.names.includes(player.name) && c.names.some(n => names.includes(n))) score += c.bonus;
-      });
 
       // Fill vital open starting positions, but do not ignore a superstar who is slightly out of role.
       if (criticalNeed(slot.key, aiRoster)) score += 8;
@@ -474,16 +474,19 @@ function chooseAiPlayer(options) {
       // Bench is no longer a dumping ground: if the player is clearly better than what is on the field,
       // draft him and let the final shuffle push him into the starting 13 later.
       if (slot.key.startsWith('B')) {
-        const benchPenalty = starPower >= 8 ? 0.5 : 3.5;
+        const benchPenalty = starPower >= 8 ? 0.4 : 3.0;
         score -= benchPenalty;
-        if (canUpgradeStarter(player, aiRoster)) score += 5;
+        if (canUpgradeStarter(player, aiRoster)) score += 6.5;
         if (openStarting.length === 0 && openBench.length) score += 2;
       }
 
       // A secondary-position superstar can still be better than an average primary-position fit.
       const drop = positionDrop(player, slot);
-      if (drop > 0 && weightedPlayerScore(player, type) >= 93) score += 1.5;
-      scored.push({ player, slot, score });
+      if (drop > 0 && weightedPlayerScore(player, type) >= 93) score += 2.0;
+      const reasonBits = [];
+      if (chem.reason) reasonBits.push(chem.reason);
+      if (power.reason) reasonBits.push(power.reason);
+      scored.push({ player, slot, score, reasonBits });
     });
   });
   if (!scored.length) {
@@ -492,13 +495,55 @@ function chooseAiPlayer(options) {
   }
   scored.sort((a, b) => b.score - a.score);
   const top = scored.slice(0, Math.min(4, scored.length));
-  const chosen = Math.random() < 0.82 ? top[0] : pick(top);
+  const chosen = Math.random() < 0.88 ? top[0] : pick(top);
   let reason = criticalNeed(chosen.slot.key, aiRoster) ? `needed a ${chosen.slot.label}` : `best squad value at ${chosen.slot.label}`;
   if (chosen.slot.key.startsWith('B')) reason = 'stockpiled an elite player for the bench shuffle';
-  if (SIGNATURES[chosen.player.name]) reason += ` with ${SIGNATURES[chosen.player.name].name}`;
+  if (chosen.reasonBits && chosen.reasonBits.length) reason += `; ${chosen.reasonBits.join('; ')}`;
   const drop = positionDrop(chosen.player, chosen.slot);
   if (drop > 0) reason += ` despite a -${drop} secondary-position drop because the effective rating was still higher`;
   return { ...chosen, reason };
+}
+
+function chemistryDraftValue(player, currentNames) {
+  let value = 0;
+  const reasons = [];
+  CHEMISTRY_COMBOS.forEach(combo => {
+    if (!combo.names.includes(player.name)) return;
+    const present = combo.names.filter(n => currentNames.includes(n));
+    const missingAfterPick = combo.names.filter(n => n !== player.name && !currentNames.includes(n));
+    if (!missingAfterPick.length && present.length) {
+      value += combo.bonus * 1.35;
+      reasons.push(`completes ${combo.label}`);
+    } else if (present.length) {
+      value += Math.max(1.5, combo.bonus * 0.55);
+      reasons.push(`builds toward ${combo.label}`);
+    }
+  });
+  return { value, reason: reasons.slice(0, 2).join(', ') };
+}
+
+function powerDraftValue(player, slot, trialRoster) {
+  const sig = SIGNATURES[player.name];
+  if (!sig) return { value: 0, reason: '' };
+  let value = sig.tier === 'legendary' ? 4.5 : 2.4;
+  if (sig.benchOnly && slot.key.startsWith('B')) value += 2.2;
+  if (sig.benchOnly && !slot.key.startsWith('B')) value -= 1.2;
+  const bd = getTeamBreakdown(trialRoster);
+  // AI values power-ups more when they fit a weakness: defensive traits in low-defence teams, attacking traits in low-attack teams.
+  const text = (sig.text || '').toLowerCase();
+  if (text.includes('defence') || text.includes('defensive') || text.includes('shuts')) value += Math.max(0, 96 - bd.defence) * 0.06;
+  if (text.includes('attack') || text.includes('tempo') || text.includes('support') || text.includes('edge')) value += Math.max(0, 96 - bd.attack) * 0.06;
+  return { value, reason: `values ${sig.name}` };
+}
+
+function aiTacticalRosterValue(testRoster) {
+  const bd = getTeamBreakdown(testRoster);
+  const names = testRoster.map(s => s.player && s.player.name).filter(Boolean);
+  const combo = chemistry(names).bonus || 0;
+  const traitCount = testRoster.filter(s => s.player && SIGNATURES[s.player.name]).length;
+  const spineFilled = ['FB','FE','HB','HK'].filter(k => testRoster.find(s => s.key === k && s.player)).length;
+  const middleFilled = ['PR1','PR2','LK'].filter(k => testRoster.find(s => s.key === k && s.player)).length;
+  return bd.total + bd.attack * 0.18 + bd.defence * 0.18 + combo * 0.8 + traitCount * 1.1 + spineFilled * 1.2 + middleFilled * 0.7;
 }
 
 function canUpgradeStarter(player, targetRoster) {
@@ -771,9 +816,12 @@ function optimiseOpponentLineup() {
 }
 
 function opponentOptimiseScore(testRoster) {
-  const rating = getTeamRating(testRoster).total;
+  const rating = getTeamRating(testRoster);
   const matchup = calculateMatchupReport(roster, testRoster);
-  return rating - matchup.edge * 0.65;
+  const names = testRoster.map(s => s.player && s.player.name).filter(Boolean);
+  const combo = chemistry(names).bonus || 0;
+  const traitCount = startingPlayers(testRoster).filter(p => SIGNATURES[p.name]).length;
+  return rating.total + rating.attack * 0.12 + rating.defence * 0.12 + combo * 0.75 + traitCount * 0.9 - matchup.edge * 0.65;
 }
 
 function showSeriesSetup(resetSeries = true) {

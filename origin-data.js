@@ -151,14 +151,58 @@ const DATA = {
   }
 };
 
+
+// v31 ratings audit: ratings now use a deliberate Origin-impact scale instead of the older
+// rough squad-list numbers. These are game ratings, not a claim of objective historical ranking.
+// The goal is balance between QLD and NSW while making iconic Origin players feel meaningfully elite.
+const RATING_AUDIT = {
+  // Queensland / Maroons legends and notable Origin performers
+  'Wally Lewis': 100, 'Johnathan Thurston': 100, 'Cameron Smith': 99, 'Darren Lockyer': 99,
+  'Billy Slater': 99, 'Greg Inglis': 98, 'Mal Meninga': 98, 'Allan Langer': 98,
+  'Arthur Beetson': 98, 'Cooper Cronk': 98, 'Gorden Tallis': 97, 'Petero Civoniceva': 97,
+  'Shane Webcke': 96, 'Steve Renouf': 97, 'Gene Miles': 94, 'Bob Lindner': 94,
+  'Trevor Gillmeister': 95, 'Paul Vautin': 92, 'Gary Belcher': 93, 'Dale Shearer': 93,
+  'Kerrod Walters': 92, 'Kevin Walters': 92, 'Sam Backo': 89, 'Martin Bella': 89,
+  'Steve Price': 94, 'Matt Scott': 94, 'Nate Myles': 91, 'Corey Parker': 93,
+  'Sam Thaiday': 93, 'Justin Hodges': 94, 'Brent Tate': 91, 'Darius Boyd': 93,
+  'Israel Folau': 93, 'Karmichael Hunt': 90, 'Matt Bowen': 91, 'Wendell Sailor': 95,
+  'Lote Tuqiri': 95, 'Matt Sing': 93, 'Willie Carne': 89, 'Michael Hancock': 90,
+  'Dane Gagai': 95, 'Cameron Munster': 97, 'Daly Cherry-Evans': 92, 'Kalyn Ponga': 95,
+  'Harry Grant': 95, 'Tino Fa’asuamaleaui': 93, "Tino Fa\'asuamaleaui": 93, 'Reuben Cotter': 92,
+  'Patrick Carrigan': 92, 'Pat Carrigan': 92, 'Josh Papalii': 92, 'Valentine Holmes': 92,
+  'Hamiso Tabuai-Fidow': 93, 'Reece Walsh': 92, 'Ben Hunt': 92, 'Michael Morgan': 91,
+  'Matt Gillett': 92, 'Kurt Capewell': 89, 'Felise Kaufusi': 90, 'Lindsay Collins': 90,
+  'Ben Ikin': 87, 'Adrian Lam': 88, 'Wayne Bartrim': 87, 'Billy Moore': 89,
+  // NSW / Blues legends and notable Origin performers
+  'Andrew Johns': 99, 'Brad Fittler': 98, 'Laurie Daley': 97, 'Peter Sterling': 96,
+  'Ricky Stuart': 96, 'Brett Kenny': 96, 'Glenn Lazarus': 98, 'Ben Elias': 95,
+  'Danny Buderus': 97, 'Paul Gallen': 97, 'Steve Roach': 95, 'Wayne Pearce': 95,
+  'Ray Price': 95, 'Steve Mortimer': 95, 'Paul Sironen': 94, 'Andrew Ettingshausen': 95,
+  'Michael O’Connor': 95, "Michael O\'Connor": 95, 'Mick Cronin': 94, 'Eric Grothe Sr': 94,
+  'Garry Jack': 93, 'Graham Eadie': 92, 'Steve Rogers': 94, 'Noel Cleal': 92,
+  'David Gillespie': 91, 'Paul Harragon': 93, 'Jim Dymock': 92, 'Geoff Toovey': 91,
+  'Anthony Minichiello': 94, 'Mark Gasnier': 95, 'Matt Cooper': 92, 'Ryan Girdler': 93,
+  'Timana Tahu': 91, 'Matt King': 91, 'Craig Fitzgibbon': 92, 'Nathan Hindmarsh': 94,
+  'Ben Kennedy': 95, 'Luke Bailey': 91, 'Craig Wing': 92, 'Jarryd Hayne': 96,
+  'Brett Morris': 95, 'Josh Morris': 94, 'Jamie Lyon': 94, 'Kurt Gidley': 91,
+  'Luke Lewis': 94, 'Boyd Cordner': 93, 'James Tedesco': 97, 'Tom Trbojevic': 97,
+  'Latrell Mitchell': 96, 'Nathan Cleary': 97, 'Mitchell Moses': 94, 'Isaah Yeo': 95,
+  'Payne Haas': 96, 'Cameron Murray': 95, 'Jake Trbojevic': 93, 'Angus Crichton': 92,
+  'Brian To’o': 92, "Brian To\'o": 92, 'Josh Addo-Carr': 94, 'Damien Cook': 93,
+  'Robbie Farah': 94, 'Apisai Koroisau': 92, 'Stephen Crichton': 93, 'Stephen Crichton': 93,
+  'Dylan Edwards': 91, 'Liam Martin': 91, 'Junior Paulo': 90, 'David Klemmer': 90,
+  'Mark Geyer': 91, 'Tony Butterfield': 90, 'Mark Carroll': 91, 'Steve Menzies': 94
+};
+
 function squad(id, name, rawPlayers) {
   return { id, name, players: rawPlayers.map(([name, positions, rating, note]) => p(name, positions, rating, note)) };
 }
 
 function p(name, positions, rating, note) {
+  const auditedRating = RATING_AUDIT[name] || rating;
   const primaryPositions = positions.filter(pos => pos !== 'B');
   const expandedPositions = expandPositions(name, positions);
-  const positionRatings = buildPositionRatings(name, primaryPositions, expandedPositions, rating);
+  const positionRatings = buildPositionRatings(name, primaryPositions, expandedPositions, auditedRating);
 
   // The headline card rating must always represent the player's best listed position rating.
   // It must never be higher or lower than the best position chip shown on the card.
@@ -189,12 +233,12 @@ function buildPositionRatings(name, primaryPositions, expandedPositions, rating)
     'Wally Lewis': { FE: 100, HB: 98, LK: 94 },
     'Johnathan Thurston': { HB: 100, FE: 98 },
     'Darren Lockyer': { FB: 99, FE: 99, HB: 93 },
-    'Cameron Smith': { HK: 100, LK: 95 },
+    'Cameron Smith': { HK: 99, LK: 95 },
     'Billy Slater': { FB: 99 },
     'Greg Inglis': { CE: 98, FB: 97, WG: 96, FE: 92 },
     'Mal Meninga': { CE: 98, WG: 94 },
-    'Steve Renouf': { CE: 95, WG: 92 },
-    'Allan Langer': { HB: 98, FE: 94 },
+    'Steve Renouf': { CE: 97, WG: 94 },
+    'Allan Langer': { HB: 98, FE: 95 },
     'Andrew Johns': { HB: 99, FE: 96, HK: 91 },
     'Brad Fittler': { FE: 98, CE: 96, LK: 94 },
     'Laurie Daley': { FE: 97, CE: 95, LK: 91 },
@@ -211,10 +255,10 @@ function buildPositionRatings(name, primaryPositions, expandedPositions, rating)
     'Brett Kenny': { FE: 96, CE: 94, HB: 92 },
     'Ricky Stuart': { HB: 96, FE: 92 },
     'Benny Elias': { HK: 95, LK: 89 },
-    'Danny Buderus': { HK: 97, LK: 90 },
+    'Danny Buderus': { HK: 97, LK: 91 },
     'Robbie Farah': { HK: 93, HB: 88 },
     'Damien Cook': { HK: 92, LK: 86 },
-    'Harry Grant': { HK: 94, LK: 88 },
+    'Harry Grant': { HK: 95, LK: 90 },
     'Ben Hunt': { HB: 92, HK: 91, FE: 89 },
     'Paul Gallen': { LK: 97, PR: 95 },
     'Isaah Yeo': { LK: 94, PR: 90 },
@@ -224,11 +268,34 @@ function buildPositionRatings(name, primaryPositions, expandedPositions, rating)
     'Glenn Lazarus': { PR: 98, LK: 92 },
     'Shane Webcke': { PR: 96, LK: 91 },
     'Petero Civoniceva': { PR: 96, LK: 91 },
-    'Payne Haas': { PR: 95, LK: 90 },
+    'Payne Haas': { PR: 96, LK: 91 },
     'Gorden Tallis': { ED: 96, LK: 94, PR: 91 },
-    'Trevor Gillmeister': { LK: 94, ED: 93 },
+    'Trevor Gillmeister': { LK: 95, ED: 94 },
     'Sam Thaiday': { ED: 93, PR: 91, LK: 90 },
-    'Corey Parker': { LK: 92, ED: 90, PR: 88 }
+    'Corey Parker': { LK: 93, ED: 91, PR: 89 },
+    'Wendell Sailor': { WG: 95, CE: 92 },
+    'Lote Tuqiri': { WG: 95, CE: 93 },
+    'Dane Gagai': { CE: 95, WG: 95 },
+    'Matt Sing': { WG: 93, CE: 91 },
+    'Michael Hancock': { WG: 90, CE: 88 },
+    'Darius Boyd': { WG: 93, FB: 91 },
+    'Josh Addo-Carr': { WG: 94 },
+    'Brett Morris': { WG: 95, FB: 92, CE: 91 },
+    'Brian To’o': { WG: 92, CE: 89 },
+    "Brian To\'o": { WG: 92, CE: 89 },
+    'Michael O’Connor': { CE: 95, WG: 94 },
+    "Michael O\'Connor": { CE: 95, WG: 94 },
+    'Andrew Ettingshausen': { CE: 95, WG: 94, FB: 92 },
+    'Eric Grothe Sr': { WG: 94, CE: 91 },
+    'Steve Mortimer': { HB: 95, FE: 92 },
+    'Peter Sterling': { HB: 96, FE: 94 },
+    'Ben Kennedy': { LK: 95, ED: 94 },
+    'Nathan Hindmarsh': { ED: 94, LK: 93 },
+    'Mark Gasnier': { CE: 95, WG: 92 },
+    'Jamie Lyon': { CE: 94, FE: 91 },
+    'Latrell Mitchell': { CE: 96, FB: 94, WG: 93 },
+    'Isaah Yeo': { LK: 95, PR: 91 },
+    'Cameron Murray': { LK: 95, ED: 93, CE: 86 }
   };
   const ratings = {};
   const explicit = special[name] || {};
