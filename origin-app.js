@@ -1037,6 +1037,26 @@ function renderFullPregameTeamTable(userRoster, oppRoster) {
   return `<div class="full-team-matchups"><h4>Full team sheet and matchup</h4><p class="muted">Starting 13 decide the pre-game overall. Bench players are shown here for planning, but only affect gameplay after they are interchanged onto the field.</p><table><thead><tr><th>Role</th><th>${DATA[selectedState].name}</th><th>Edge</th><th>${DATA[opponentState].name}</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
+function bestPositionRating(player) {
+  if (!player) return 0;
+  const ratings = [];
+  if (player.positionRatings) {
+    Object.keys(player.positionRatings).forEach(pos => {
+      const value = Number(player.positionRatings[pos]);
+      if (!Number.isNaN(value)) ratings.push(value);
+    });
+  }
+  if (Array.isArray(player.positions)) {
+    player.positions.forEach(pos => {
+      if (pos === 'B') return;
+      const value = positionRating(player, pos);
+      if (!Number.isNaN(Number(value))) ratings.push(Number(value));
+    });
+  }
+  if (ratings.length) return Math.max(...ratings);
+  return Number(player.rating) || 0;
+}
+
 function positionDropLabel(player, type) {
   const best = bestPositionRating(player);
   const current = positionRating(player, type);
