@@ -133,16 +133,21 @@ const SERIES_TRAITS = {
 };
 
 const CHEMISTRY_COMBOS = [
-  { names: ['Cameron Smith','Cooper Cronk','Billy Slater'], label: 'Storm spine', bonus: 8, stats: ['attack','clutch'] },
-  { names: ['Cameron Smith','Johnathan Thurston','Billy Slater'], label: 'Maroons dynasty spine', bonus: 8, stats: ['attack','aura'] },
-  { names: ['Darren Lockyer','Johnathan Thurston'], label: 'Lockyer + Thurston', bonus: 5, stats: ['kicking','clutch'] },
-  { names: ['Wally Lewis','Mal Meninga'], label: 'The King and Big Mal', bonus: 5, stats: ['aura','attack'] },
-  { names: ['Nathan Cleary','Isaah Yeo'], label: 'Panthers control', bonus: 5, stats: ['kicking','defence'] },
-  { names: ['Andrew Johns','Danny Buderus'], label: 'Knights ruck control', bonus: 5, stats: ['attack','clutch'] },
-  { names: ['Brad Fittler','Andrew Johns'], label: 'Freddy + Joey', bonus: 6, stats: ['attack','kicking'] },
-  { names: ['James Tedesco','Tom Trbojevic','Latrell Mitchell'], label: 'Modern Blues strike', bonus: 7, stats: ['attack','speed'] },
-  { names: ['Paul Gallen','Boyd Cordner'], label: 'Blues grit', bonus: 4, stats: ['toughness','defence'] },
-  { names: ['Cameron Munster','Harry Grant'], label: 'Modern Maroons deception', bonus: 5, stats: ['attack','speed'] }
+  { names: ['Cameron Smith','Cooper Cronk','Billy Slater'], label: 'Storm spine', bonus: 8, stats: ['attack','clutch'], effect: '+organisation, +support play, +goal-line defence' },
+  { names: ['Cameron Smith','Johnathan Thurston','Billy Slater'], label: 'Maroons dynasty spine', bonus: 8, stats: ['attack','aura'], effect: '+spine attack, +composure, +Origin aura' },
+  { names: ['Darren Lockyer','Johnathan Thurston'], label: 'Lockyer + Thurston', bonus: 5, stats: ['kicking','clutch'], effect: '+kicking control, +late-game composure' },
+  { names: ['Wally Lewis','Mal Meninga'], label: 'The King and Big Mal', bonus: 5, stats: ['aura','attack'], effect: '+leadership, +right-edge authority' },
+  { names: ['Nathan Cleary','Isaah Yeo'], label: 'Panthers control', bonus: 5, stats: ['kicking','defence'], effect: '+completion rate, +middle organisation' },
+  { names: ['Andrew Johns','Danny Buderus'], label: 'Newcastle connection', bonus: 5, stats: ['attack','clutch'], effect: '+ruck speed, +short-side attack' },
+  { names: ['Brad Fittler','Andrew Johns'], label: 'Blues playmaker duo', bonus: 6, stats: ['attack','kicking'], effect: '+creativity, +field position' },
+  { names: ['James Tedesco','Tom Trbojevic','Latrell Mitchell'], label: 'Modern Blues strike', bonus: 7, stats: ['attack','speed'], effect: '+yardage, +support play, +edge strike' },
+  { names: ['Paul Gallen','Boyd Cordner'], label: 'Blues grit', bonus: 4, stats: ['toughness','defence'], effect: '+defensive resolve, +middle pressure' },
+  { names: ['Cameron Munster','Harry Grant'], label: 'Modern Maroons tempo', bonus: 5, stats: ['attack','speed'], effect: '+ruck tempo, +broken field attack' },
+  { names: ['Allan Langer','Kevin Walters','Steve Renouf'], label: 'Broncos dynasty', bonus: 6, stats: ['attack','speed'], effect: '+broken play, +right-edge strike' },
+  { names: ['Greg Inglis','Johnathan Thurston'], label: 'Thurston + Inglis strike edge', bonus: 5, stats: ['attack','clutch'], effect: '+left-edge strike, +one-on-one threat' },
+  { names: ['Cooper Cronk','Billy Slater'], label: 'Inside support line', bonus: 4, stats: ['attack','speed'], effect: '+support tries, +kick chase' },
+  { names: ['Tom Trbojevic','James Tedesco'], label: 'Blues backfield threat', bonus: 4, stats: ['speed','attack'], effect: '+kick returns, +support play' },
+  { names: ['Paul Gallen','James Tedesco'], label: 'Blues competitive spine', bonus: 3, stats: ['toughness','clutch'], effect: '+effort plays, +momentum recovery' }
 ];
 
 
@@ -248,7 +253,7 @@ function renderCoachSummary() {
 document.querySelectorAll('.state-btn').forEach(btn => btn.addEventListener('click', () => chooseState(btn.dataset.state)));
 spinBtn.addEventListener('click', spinSquad);
 resetBtn.addEventListener('click', resetGame);
-simulateBtn.addEventListener('click', showSeriesSetup);
+simulateBtn.addEventListener('click', () => { if (!simulateBtn.disabled) showSeriesSetup(true); });
 exportBtn.addEventListener('click', () => exportTeam());
 importBtn.addEventListener('click', () => importOpponent());
 if (startChallengeBtn) startChallengeBtn.addEventListener('click', () => startFriendChallenge());
@@ -307,14 +312,14 @@ function renderChoices() {
   }
   availablePlayers.forEach(player => {
     const legalCount = legalSlots(player, roster).length;
-    const card = playerCard(player, legalCount, selectedPlayer && selectedPlayer.id === player.id);
+    const card = playerCard(player, legalCount, selectedPlayer && selectedPlayer.id === player.id, false, roster);
     card.disabled = legalCount === 0;
     card.addEventListener('click', () => selectPlayer(player));
     choices.appendChild(card);
   });
 }
 
-function playerCard(player, legalCount, selected = false, picked = false) {
+function playerCard(player, legalCount, selected = false, picked = false, contextRoster = null) {
   const sig = SIGNATURES[player.name];
   const card = document.createElement('button');
   card.type = 'button';
@@ -326,14 +331,21 @@ function playerCard(player, legalCount, selected = false, picked = false) {
     const label = primary ? `${pos} ${rating}` : `${pos} ${rating} (-${drop})`;
     return `<span class="tag ${primary ? 'primary-pos' : 'secondary-pos'}">${label}</span>`;
   }).join('');
+  const skill = sig ? `<div class="visible-skill" data-tip="${escapeAttr(sig.text)} Chance: ${Math.round((sig.chance || 0) * 100)}%. Rare ${sig.tier} boost.">⭐ ${sig.name}</div>` : '';
+  const chem = contextRoster ? chemistryBoostForPlayer(player, contextRoster, { includeCandidate: true }) : null;
+  const chemLine = chem && chem.totalBoost
+    ? `<div class="chem-line" data-tip="${escapeAttr(chem.tooltip)}">⚡ Chemistry ${formatSigned(chem.totalBoost)} ${chem.labels.join(', ')}</div>`
+    : '';
   card.innerHTML = `
     <div>
       <h3>${player.name}</h3>
       <p class="muted">${player.note}</p>
-      <div class="tags">${posTags}${sig ? `<span class="tag trait">${sig.name}</span>` : ''}</div>
+      ${skill}
+      ${chemLine}
+      <div class="tags">${posTags}</div>
       <small class="slot-hint">${legalCount !== null ? (legalCount ? `${legalCount} legal open slot${legalCount === 1 ? '' : 's'} — yellow tags show ability drop` : 'No legal open slots') : 'AI option'}</small>
     </div>
-    <div class="rating">${player.rating}</div>
+    <div class="rating">${player.rating}${chem && chem.totalBoost ? `<small class="chem-rating">+${chem.totalBoost}</small>` : ''}</div>
   `;
   return card;
 }
@@ -416,12 +428,12 @@ function runAiDraftPick() {
     squadName.textContent = `${DATA[opponentState].name} spin: ${squad.name}`;
     squadNote.textContent = 'Opposition sees this full team, weighs ratings, needs, chemistry and traits, then makes one pick.';
     choices.innerHTML = '';
-    options.forEach(player => choices.appendChild(playerCard(player, legalSlots(player, aiRoster).length, false, false)));
+    options.forEach(player => choices.appendChild(playerCard(player, legalSlots(player, aiRoster).length, false, false, aiRoster))); 
 
     const aiPick = chooseAiPlayer(options);
     setTimeout(() => {
       choices.innerHTML = '';
-      options.forEach(player => choices.appendChild(playerCard(player, legalSlots(player, aiRoster).length, false, player.id === aiPick.player.id)));
+      options.forEach(player => choices.appendChild(playerCard(player, legalSlots(player, aiRoster).length, false, player.id === aiPick.player.id, aiRoster))); 
       aiRoster.find(s => s.key === aiPick.slot.key).player = aiPick.player;
       aiUsedPlayerIds.add(aiPick.player.id);
       squadNote.textContent = `${DATA[opponentState].name} selected ${aiPick.player.name} at ${aiPick.slot.label}. Reason: ${aiPick.reason}`;
@@ -563,14 +575,20 @@ function positionDrop(player, slot) {
 function slotRatingLabel(player, slot) {
   const rating = positionRating(player, slot);
   const drop = positionDrop(player, slot);
-  return drop > 0 ? `${rating} <span class="pos-drop">-${drop}</span>` : `${rating}`;
+  const hostRoster = opponentState && aiRoster && aiRoster.some(s => s.player === player) ? aiRoster : roster;
+  const chem = chemistryBoostForPlayer(player, hostRoster, { includeCandidate: false });
+  const skill = SIGNATURES[player.name] ? `<span class="mini-skill" data-tip="${escapeAttr(SIGNATURES[player.name].text)}">⭐</span>` : '';
+  const chemText = chem && chem.totalBoost ? ` <span class="chem-mini" data-tip="${escapeAttr(chem.tooltip)}">+${chem.totalBoost}</span>` : '';
+  return `${rating}${drop > 0 ? ` <span class="pos-drop">-${drop}</span>` : ''}${chemText}${skill}`;
 }
 
 function candidateSlotLabel(player, slot) {
   if (!player) return '';
   const rating = positionRating(player, slot);
   const drop = positionDrop(player, slot);
-  return drop > 0 ? `${rating} ⚠ -${drop}` : `${rating}`;
+  const chem = chemistryBoostForPlayer(player, roster, { includeCandidate: true });
+  const chemText = chem && chem.totalBoost ? ` ⚡+${chem.totalBoost}` : '';
+  return `${rating}${drop > 0 ? ` ⚠ -${drop}` : ''}${chemText}`;
 }
 
 function swapCandidateLabel(fromKey, targetSlot) {
@@ -583,11 +601,13 @@ function legalSlotSummary(player, targetRoster) {
 }
 
 function renderRoster() {
+  updateDraftRatingStrip(rosterEl, roster, selectedState, 'Your side');
   rosterEl.innerHTML = '';
   roster.forEach(slot => rosterEl.appendChild(slotButton(slot, true)));
 }
 
 function renderOppRoster() {
+  updateDraftRatingStrip(oppRosterEl, aiRoster, opponentState, 'Opposition');
   oppRosterEl.innerHTML = '';
   aiRoster.forEach(slot => {
     const row = document.createElement('div');
@@ -599,6 +619,25 @@ function renderOppRoster() {
     `;
     oppRosterEl.appendChild(row);
   });
+}
+
+function updateDraftRatingStrip(anchorEl, targetRoster, state, label) {
+  if (!anchorEl || !anchorEl.parentNode || !state) return;
+  const className = anchorEl.id === 'roster' ? 'user-draft-ratings' : 'opp-draft-ratings';
+  let strip = anchorEl.parentNode.querySelector(`.${className}`);
+  if (!strip) {
+    strip = document.createElement('div');
+    strip.className = `draft-rating-strip ${className}`;
+    anchorEl.parentNode.insertBefore(strip, anchorEl);
+  }
+  const bd = getTeamBreakdown(targetRoster);
+  const picked = targetRoster.filter(s => s.player).length;
+  strip.innerHTML = `
+    <div><strong>${label}</strong><small>${picked}/17 picked • starting 13 only</small></div>
+    <span>OVR <b>${bd.total}</b></span>
+    <span>ATT <b>${bd.attack}</b></span>
+    <span>DEF <b>${bd.defence}</b></span>
+  `;
 }
 
 function slotButton(slot) {
@@ -760,13 +799,18 @@ function showSeriesSetup(resetSeries = true) {
         </div>
         <button class="primary play-now" onclick="playNextGame()">Play Game ${series.game}</button>
       </div>
-      <div class="rating-grid">
+      <div class="rating-grid attack-defence-grid">
         <div><strong>Your series score</strong><span>${series.userWins}</span></div>
         <div><strong>Opposition series score</strong><span>${series.oppWins}</span></div>
-        <div><strong>Your starting 13</strong><span>${userRating.total}</span></div>
-        <div><strong>Opp starting 13</strong><span>${oppRating.total}</span></div>
+        <div><strong>Your OVR</strong><span>${userRating.total}</span><small>Starting 13</small></div>
+        <div><strong>Opp OVR</strong><span>${oppRating.total}</span><small>Starting 13</small></div>
+        <div><strong>Your attack</strong><span>${userRating.attack}</span><small>vs opp defence ${oppRating.defence}</small></div>
+        <div><strong>Your defence</strong><span>${userRating.defence}</span><small>vs opp attack ${oppRating.attack}</small></div>
+        <div><strong>Opp attack</strong><span>${oppRating.attack}</span><small>vs your defence ${userRating.defence}</small></div>
+        <div><strong>Opp defence</strong><span>${oppRating.defence}</span><small>vs your attack ${userRating.attack}</small></div>
         <div><strong>Matchup edge</strong><span>${matchup.edge > 0 ? '+' : ''}${matchup.edge}</span></div>
       </div>
+      <div class="tactical-note"><strong>How the sim reads this:</strong> attacking chances compare a side's Attack against the other side's Defence. A great attack still has to beat the defence in front of it.</div>
       ${renderCoachSummary()}
       ${renderKickerSelection()}
       <div class="compare-grid compact-compare">
@@ -785,7 +829,7 @@ function showSeriesSetup(resetSeries = true) {
       <div class="bench-tip"><strong>Bench fix tip:</strong> green rows favour you, red rows favour the opposition. Click a player in your 17, then click a legal bench or position slot to swap and update the comparison.</div>
     </div>
   `;
-  window.scrollTo({ top: simResult.closest('.sim-card').offsetTop - 20, behavior: 'smooth' });
+  simResult.closest('.sim-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function showMode(mode) {
@@ -832,14 +876,23 @@ function cloneRoster(targetRoster) {
 }
 
 function getTeamRating(targetRoster) {
-  // Team overall is based on the starting 13 only, using each player's rating in the slot he is actually playing.
+  return getTeamBreakdown(targetRoster);
+}
+
+function getTeamBreakdown(targetRoster) {
+  // Starting 13 only. Bench players do not count until they are interchanged on during gameplay.
   const slots = startingSlots(targetRoster).filter(s => s.player);
-  if (!slots.length) return { total: 0, comboText: '' };
-  const avg = key => slots.reduce((sum, s) => sum + effectiveStats(s.player, slotType(s.key))[key], 0) / slots.length;
+  if (!slots.length) return { total: 0, attack: 0, defence: 0, comboText: '', combo: { bonus: 0, text: '' } };
+  const avg = selector => slots.reduce((sum, s) => {
+    const st = effectiveStats(s.player, slotType(s.key));
+    return sum + selector(st);
+  }, 0) / slots.length;
   const names = slots.map(s => s.player.name);
   const combo = chemistry(names);
-  const total = Math.round((avg('attack') + avg('defence') + avg('speed') * 0.6 + avg('kicking') * 0.7 + avg('toughness') + avg('clutch') + avg('aura')) / 6.3 + combo.bonus);
-  return { total, comboText: combo.text, combo };
+  const attack = Math.round(avg(st => (st.attack * 1.25 + st.speed * 0.55 + st.kicking * 0.45 + st.clutch * 0.45 + st.aura * 0.25) / 2.95) + combo.bonus * 0.55);
+  const defence = Math.round(avg(st => (st.defence * 1.25 + st.toughness * 0.75 + st.clutch * 0.25 + st.aura * 0.25) / 2.5) + combo.bonus * 0.45);
+  const total = Math.round((attack + defence) / 2);
+  return { total, attack, defence, comboText: combo.text, combo };
 }
 
 function calculateMatchupReport(userRoster, oppRoster) {
@@ -959,13 +1012,29 @@ function prettyStat(key) {
 }
 
 function renderTraitSummary(userRoster, oppRoster) {
-  const userTraits = startingPlayers(userRoster).filter(p => SIGNATURES[p.name]).slice(0, 5).map(p => `${p.name}: ${SIGNATURES[p.name].name}`);
-  const oppTraits = startingPlayers(oppRoster).filter(p => SIGNATURES[p.name]).slice(0, 5).map(p => `${p.name}: ${SIGNATURES[p.name].name}`);
-  const userCombo = chemistry(startingPlayers(userRoster).map(p => p.name)).text || 'No major combo';
-  const oppCombo = chemistry(startingPlayers(oppRoster).map(p => p.name)).text || 'No major combo';
-  return `<div class="trait-box"><p><strong>Your traits:</strong> ${userTraits.join('; ') || 'None'}</p><p><strong>Opp traits:</strong> ${oppTraits.join('; ') || 'None'}</p><p><strong>Your chemistry:</strong> ${userCombo}</p><p><strong>Opp chemistry:</strong> ${oppCombo}</p></div>`;
+  const userTraits = startingPlayers(userRoster).filter(p => SIGNATURES[p.name]).slice(0, 7).map(p => skillPill(p));
+  const oppTraits = startingPlayers(oppRoster).filter(p => SIGNATURES[p.name]).slice(0, 7).map(p => skillPill(p));
+  const userChem = renderChemistryPanel('Your chemistry', userRoster);
+  const oppChem = renderChemistryPanel('Opposition chemistry', oppRoster);
+  return `<div class="trait-box"><h4>Traits and chemistry</h4>
+    <p><strong>Your visible skills:</strong> ${userTraits.join(' ') || 'None'}</p>
+    <p><strong>Opp visible skills:</strong> ${oppTraits.join(' ') || 'None'}</p>
+    <div class="chemistry-panels">${userChem}${oppChem}</div>
+  </div>`;
 }
 
+function skillPill(player) {
+  const sig = SIGNATURES[player.name];
+  if (!sig) return '';
+  return `<span class="skill-pill" data-tip="${escapeAttr(sig.text)} Chance: ${Math.round((sig.chance || 0) * 100)}%. Rare ${sig.tier} boost.">${player.name}: ${sig.name}</span>`;
+}
+
+function renderChemistryPanel(title, targetRoster) {
+  const details = chemistryDetails(targetRoster.map(s => s.player).filter(Boolean).map(p => p.name));
+  const active = details.active.map(c => `<li><strong>${c.label}</strong> ${formatSigned(chemistryPlayerBoost(c))} <small>${c.effect || ''}</small></li>`).join('');
+  const near = details.near.map(c => `<li class="muted"><strong>${c.label}</strong> needs ${c.missing.join(', ')}</li>`).join('');
+  return `<div class="chemistry-card"><h5>${title}</h5>${active ? `<ul>${active}</ul>` : '<p class="muted">No active chemistry yet.</p>'}${near ? `<p class="muted">One away:</p><ul>${near}</ul>` : ''}</div>`;
+}
 
 function kickingRating(player) {
   if (!player) return 0;
@@ -1042,8 +1111,8 @@ function playNextGame() {
   ensureKickers();
   const opp = getActiveOpponentRoster();
   const matchup = calculateMatchupReport(roster, opp);
-  const userRating = getTeamRating(roster).total;
-  const oppRating = getTeamRating(opp).total;
+  const userBreakdown = getTeamBreakdown(roster);
+  const oppBreakdown = getTeamBreakdown(opp);
   const weather = pick(WEATHER);
   const ref = pick(REFS);
   const venue = getVenueForGame(gameNo);
@@ -1062,7 +1131,10 @@ function playNextGame() {
   if (rareTraits.notes.length) seriesMods.notes.push(...rareTraits.notes);
   if (benchPlan.notes.length) seriesMods.notes.push(...benchPlan.notes.slice(0, 2));
   if (liveSwing.notes.length) seriesMods.notes.push(...liveSwing.notes);
-  const ratingEdge = (userRating - oppRating) * 0.42; // six overall points is a real edge, not an automatic win
+  // Attack v Defence drives scoring chances. Overall is still shown, but this is the tactical engine.
+  const userAttackEdge = userBreakdown.attack - oppBreakdown.defence;
+  const userDefenceEdge = userBreakdown.defence - oppBreakdown.attack;
+  const ratingEdge = userAttackEdge * 0.33 + userDefenceEdge * 0.29;
   const matchupEdge = matchup.edge * 0.55;
   const randomEdge = (Math.random() * 13 - 6.5);
   // Bench players and rare player boosts now affect the match only from the minute they are on the field / triggered.
@@ -1093,6 +1165,9 @@ function playNextGame() {
   }
 
   lastGameStats = generateMatchStats(regulationUserScore, regulationOppScore, userScore, oppScore, matchup, weather, ref, opp, goldenPoint, venue, home);
+  lastGameStats.userBreakdown = userBreakdown;
+  lastGameStats.oppBreakdown = oppBreakdown;
+  lastGameStats.attackDefenceEdge = { userAttackEdge, userDefenceEdge };
   lastGameStats.seriesMods = seriesMods;
   lastGameStats.benchPlan = benchPlan;
   lastGameStats.liveSwing = liveSwing;
@@ -1200,7 +1275,7 @@ function renderGameShell(gameNo, weather, ref, goldenPoint, matchup, seriesMods)
       </div>
     </div>
   `;
-  window.scrollTo({ top: simResult.closest('.sim-card').offsetTop - 20, behavior: 'smooth' });
+  simResult.closest('.sim-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function watchEvents(events, finalUserScore, finalOppScore) {
@@ -1379,7 +1454,7 @@ function renderPostGameSummary(gameNo, userScore, oppScore, won) {
       <div class="button-row summary-actions">${nextButton}<button class="ghost" onclick="resetGame()">Generate a new team</button></div>
     </div>
   `;
-  window.scrollTo({ top: simResult.closest('.sim-card').offsetTop - 20, behavior: 'smooth' });
+  simResult.closest('.sim-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function advanceToNextGame() {
@@ -1879,9 +1954,9 @@ function findFreeMinute(used, preferred = null) {
 
 
 function generateMatchStats(regUserScore, regOppScore, finalUserScore, finalOppScore, matchup, weather, ref, oppRoster, goldenPoint, venue, home) {
-  const userRating = getTeamRating(roster).total;
-  const oppRating = getTeamRating(oppRoster).total;
-  const edge = userRating - oppRating + matchup.edge * 0.35;
+  const userBD = getTeamBreakdown(roster);
+  const oppBD = getTeamBreakdown(oppRoster);
+  const edge = (userBD.attack - oppBD.defence) * 0.45 + (userBD.defence - oppBD.attack) * 0.35 + matchup.edge * 0.35;
   const userPoss = clampStat(Math.round(50 + edge * 0.35 + (Math.random() * 6 - 3)), 42, 58);
   const oppPoss = 100 - userPoss;
   const userCompletions = clampStat(Math.round(78 + edge * 0.25 + (weather.includes('rain') || weather.includes('Slippery') ? -5 : 0) + Math.random() * 7), 65, 92);
@@ -2069,15 +2144,41 @@ function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 function chemistry(names) {
   let bonus = 0;
   const found = [];
-  CHEMISTRY_COMBOS.forEach(combo => {
-    if (combo.names.every(name => names.includes(name))) {
-      bonus += combo.bonus;
-      found.push(combo.label);
-    }
+  chemistryDetails(names).active.forEach(combo => {
+    bonus += combo.bonus;
+    found.push(combo.label);
   });
   return { bonus, text: found.length ? found.join('; ') : '' };
 }
 
+function chemistryDetails(names) {
+  const uniqueNames = [...new Set(names.filter(Boolean))];
+  const active = [];
+  const near = [];
+  CHEMISTRY_COMBOS.forEach(combo => {
+    const present = combo.names.filter(name => uniqueNames.includes(name));
+    const missing = combo.names.filter(name => !uniqueNames.includes(name));
+    if (!missing.length) active.push({ ...combo, present, missing });
+    else if (missing.length === 1 && present.length >= Math.max(1, combo.names.length - 1)) near.push({ ...combo, present, missing });
+  });
+  return { active, near };
+}
+
+function chemistryPlayerBoost(combo) {
+  return Math.max(1, Math.round((combo.bonus || 0) / 3));
+}
+
+function chemistryBoostForPlayer(player, targetRoster, opts = {}) {
+  if (!player || !targetRoster) return { totalBoost: 0, labels: [], tooltip: '' };
+  const names = targetRoster.map(s => s.player && s.player.name).filter(Boolean);
+  if (opts.includeCandidate && !names.includes(player.name)) names.push(player.name);
+  const active = chemistryDetails(names).active.filter(combo => combo.names.includes(player.name));
+  if (!active.length) return { totalBoost: 0, labels: [], tooltip: '' };
+  const totalBoost = active.reduce((sum, combo) => sum + chemistryPlayerBoost(combo), 0);
+  const labels = active.map(c => c.label);
+  const tooltip = active.map(c => `${c.label}: ${c.effect || 'chemistry boost'} (${c.names.join(' + ')})`).join(' | ');
+  return { totalBoost, labels, tooltip, combos: active };
+}
 
 async function exportTeam() {
   if (!rosterFull()) return;

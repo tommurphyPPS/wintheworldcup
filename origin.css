@@ -599,3 +599,126 @@ h2 { margin: 0 0 10px; letter-spacing: -0.03em; }
 }
 .kicker-box option { color: #111; }
 .full-team-matchups,.my-series-stats{margin-top:18px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:14px}.full-team-matchups table,.my-series-stats table{width:100%;border-collapse:collapse}.full-team-matchups th,.full-team-matchups td,.my-series-stats td{padding:9px 10px;border-bottom:1px solid rgba(255,255,255,.1);vertical-align:top}.full-team-matchups small{display:block;opacity:.75;margin-top:3px}.full-team-matchups tr.good td:nth-child(3){color:#6ee7a8}.full-team-matchups tr.bad td:nth-child(3){color:#ff9a9a}.full-team-matchups tr.even td:nth-child(3),.full-team-matchups tr.bench-row td:nth-child(3){color:#ffd36e}.my-series-stats td:last-child{text-align:right;font-weight:800}
+
+/* v28 chemistry and skill visibility */
+.visible-skill,
+.chem-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  margin: 4px 0 8px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .01em;
+}
+.visible-skill {
+  background: rgba(243,193,92,.16);
+  border: 1px solid rgba(243,193,92,.36);
+  color: #ffe2a2;
+}
+.chem-line {
+  background: rgba(109,213,255,.13);
+  border: 1px solid rgba(109,213,255,.34);
+  color: #bdeeff;
+}
+.chem-rating {
+  display: block;
+  font-size: 13px;
+  color: #8fffd0;
+  margin-top: -3px;
+}
+.chem-mini,
+.mini-skill,
+.skill-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 5px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: help;
+}
+.chem-mini { background: rgba(109,213,255,.16); color: #bdeeff; border: 1px solid rgba(109,213,255,.25); }
+.mini-skill { background: rgba(243,193,92,.16); color: #ffe2a2; border: 1px solid rgba(243,193,92,.25); }
+.skill-pill { background: rgba(243,193,92,.12); color: #ffe2a2; border: 1px solid rgba(243,193,92,.22); margin: 2px 4px 2px 0; }
+.chemistry-panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; margin-top: 10px; }
+.chemistry-card { background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.1); border-radius: 14px; padding: 10px 12px; }
+.chemistry-card h5 { margin: 0 0 8px; color: var(--gold); }
+.chemistry-card ul { margin: 6px 0 0 18px; padding: 0; }
+.chemistry-card li { margin: 5px 0; }
+[data-tip] { position: relative; }
+[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 8px);
+  z-index: 100;
+  min-width: 220px;
+  max-width: 340px;
+  white-space: normal;
+  line-height: 1.35;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #101727;
+  color: #fff;
+  border: 1px solid rgba(255,255,255,.16);
+  box-shadow: 0 12px 30px rgba(0,0,0,.35);
+  font-size: 12px;
+  font-weight: 600;
+  pointer-events: none;
+}
+[data-tip]:hover::before {
+  content: '';
+  position: absolute;
+  left: 18px;
+  bottom: calc(100% + 2px);
+  border: 6px solid transparent;
+  border-top-color: #101727;
+  z-index: 101;
+}
+
+/* v29 attack/defence strategy and draft feedback */
+.draft-rating-strip {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) repeat(3, auto);
+  gap: 8px;
+  align-items: center;
+  margin: 8px 0 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+}
+.draft-rating-strip strong { display:block; }
+.draft-rating-strip small { color: var(--muted); font-size: 0.75rem; }
+.draft-rating-strip span {
+  min-width: 66px;
+  text-align: center;
+  padding: 7px 9px;
+  border-radius: 10px;
+  background: rgba(0,0,0,0.22);
+  font-size: 0.78rem;
+  letter-spacing: .04em;
+}
+.draft-rating-strip b { font-size: 1.05rem; }
+.attack-defence-grid small {
+  display:block;
+  color: var(--muted);
+  font-size:.72rem;
+  margin-top: 2px;
+}
+.tactical-note {
+  margin: 12px 0 16px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: var(--muted);
+}
+.tactical-note strong { color: var(--text); }
